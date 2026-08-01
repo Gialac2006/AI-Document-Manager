@@ -1,0 +1,33 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+backend/venv/
+venv/
+.venv/
+
+# Node.js
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Uploaded files
+storage/uploads/
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
