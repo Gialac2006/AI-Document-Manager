@@ -18,7 +18,8 @@ frontend/dist/
 dist/
 
 # Uploaded files
-storage/uploads/
+storage/uploads/*
+!storage/uploads/.gitkeep
 uploads/
 
 # IDE
