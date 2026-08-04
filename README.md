@@ -18,7 +18,7 @@ Sản phẩm gồm: Website, REST API, Docker và tài liệu kỹ thuật.
 ### Quản lý tài liệu
 - Upload tài liệu (PDF, DOCX, ảnh...)
 - Quản lý thư mục theo cây phân cấp
-- Phân quyền người dùng (admin, editor, viewer)
+- Phân quyền theo vai trò (admin hệ thống, quản lý, nhân viên, cá nhân)
 - OCR và chuyển PDF thành văn bản
 - Phiên bản tài liệu (versioning)
 - Nhật ký chỉnh sửa (audit log)
@@ -34,6 +34,29 @@ Sản phẩm gồm: Website, REST API, Docker và tài liệu kỹ thuật.
 - RAG (Retrieval-Augmented Generation)
 - Vector Database
 - Chat với PDF
+
+## Vai trò người dùng
+
+Hệ thống phân biệt **admin hệ thống** và **người dùng trong tổ chức / cá nhân**.
+
+| Vai trò | Thuộc tổ chức? | Quyền |
+|---|---|---|
+| **Admin hệ thống** (`super_admin`) | Không | Toàn quyền hệ thống: tạo/quản lý tổ chức, quản lý người dùng, giám sát |
+| **Quản lý** (`manager`) | Có | Quản trị nội bộ: quản lý nhân viên, tạo thư mục/tài liệu, toàn quyền tài liệu của tổ chức |
+| **Nhân viên** (`staff`) | Có | Xem + chỉnh sửa tài liệu trong tổ chức, không xoá, không quản lý người khác |
+| **Cá nhân** (`individual`) | Không | Tự dùng riêng: upload, xem, quản lý tài liệu của chính mình |
+
+**Quy tắc phạm vi dữ liệu:**
+- Admin hệ thống quản lý toàn bộ hệ thống.
+- Quản lý & nhân viên chỉ thấy dữ liệu trong tổ chức của mình.
+- Cá nhân chỉ thấy tài liệu của chính mình.
+- Phân quyền chi tiết theo từng tài liệu sẽ được bổ sung ở giai đoạn sau.
+
+**Luồng đăng ký:**
+- Đăng ký **Cá nhân** → tài khoản `individual`, dùng riêng tài liệu của mình.
+- Đăng ký **Tổ chức** (nhập tên tổ chức) → tạo tổ chức, người đăng ký trở thành `manager`.
+- `manager` thêm/thu hồi nhân viên trong trang quản trị của tổ chức.
+- `super_admin` (chủ hệ thống) tạo/quản lý mọi tổ chức từ trang Admin hệ thống.
 
 ## Tech stack
 
@@ -66,6 +89,9 @@ ai-document-manager/
 │   └── nginx.conf               # SPA + proxy /api
 │
 ├── backend/                     # FastAPI
+│   ├── alembic/                 # migration schema (Alembic)
+│   │   └── versions/
+│   ├── alembic.ini
 │   └── app/
 │       ├── main.py              # entry point
 │       ├── api/
@@ -73,7 +99,7 @@ ai-document-manager/
 │       │   └── routes/          # auth, users, folders, documents, search, chat, admin
 │       ├── core/                # config, security, exceptions
 │       ├── database/            # connection, base
-│       ├── models/              # user, folder, document, document_version, permission, audit_log, chat
+│       ├── models/              # organization, user, folder, document, document_version, permission, audit_log, chat
 │       ├── schemas/             # Pydantic request/response
 │       ├── repositories/        # truy vấn DB
 │       ├── services/            # auth, document, storage, extraction, ocr, chunking, embedding, vector, summary, rag
@@ -130,10 +156,20 @@ uvicorn app.main:app --reload
 |---|---|---|---|
 | GET | `/` | Thông tin API | ✅ |
 | GET | `/health` | Kiểm tra sức khoẻ | ✅ |
-| POST | `/api/v1/auth/register` | Đăng ký | ⏳ |
-| POST | `/api/v1/auth/login` | Đăng nhập, nhận token | ⏳ |
-| GET | `/api/v1/auth/me` | Thông tin người dùng hiện tại | ⏳ |
-| GET | `/api/v1/users` | Danh sách người dùng (admin) | ⏳ |
+| POST | `/api/v1/auth/register` | Đăng ký (cá nhân / tạo tổ chức → manager) | ✅ |
+| POST | `/api/v1/auth/login` | Đăng nhập, nhận token | ✅ |
+| GET | `/api/v1/auth/me` | Thông tin người dùng hiện tại | ✅ |
+| POST | `/api/v1/auth/forgot-password` | Gửi yêu cầu đặt lại mật khẩu (dev mode trả link reset) | ✅ |
+| GET | `/api/v1/auth/reset-password/validate` | Kiểm tra token đặt lại mật khẩu | ✅ |
+| POST | `/api/v1/auth/reset-password` | Đặt lại mật khẩu bằng token | ✅ |
+| GET | `/api/v1/users` | Danh sách user (manager: trong org; super_admin: tất cả) | ✅ |
+| POST | `/api/v1/users` | Thêm nhân viên (manager thêm vào org của mình) | ✅ |
+| DELETE | `/api/v1/users/{id}` | Xoá nhân viên (manager) / bất kỳ user (super_admin) | ✅ |
+| GET | `/api/v1/admin/organizations` | Danh sách tổ chức (super_admin) | ✅ |
+| POST | `/api/v1/admin/organizations` | Tạo tổ chức (super_admin) | ✅ |
+| GET | `/api/v1/admin/organizations/{id}` | Chi tiết tổ chức + thành viên (super_admin) | ✅ |
+| DELETE | `/api/v1/admin/organizations/{id}` | Xoá tổ chức (super_admin) | ✅ |
+| GET | `/api/v1/admin/users` | Danh sách mọi người dùng (super_admin) | ✅ |
 | GET/POST | `/api/v1/folders` | Danh sách / tạo thư mục | ⏳ |
 | PUT/DELETE | `/api/v1/folders/{id}` | Đổi tên / xoá thư mục | ⏳ |
 | GET/POST | `/api/v1/documents` | Danh sách / upload tài liệu | ⏳ |
@@ -142,30 +178,71 @@ uvicorn app.main:app --reload
 | GET | `/api/v1/documents/{id}/versions` | Lịch sử phiên bản | ⏳ |
 | GET | `/api/v1/search?q=...` | Tìm kiếm ngữ nghĩa | ⏳ |
 | POST | `/api/v1/chat` | Hỏi đáp theo tài liệu (RAG) | ⏳ |
-| GET | `/api/v1/admin/*` | Quản trị hệ thống | ⏳ |
 
-> ✅ = đã triển khai, ⏳ = đang phát triển. Tài liệu API đầy đủ tại `/docs` (Swagger UI).
+> ✅ = đã triển khai, ⏳ = chưa triển khai. Tài liệu API đầy đủ tại `/docs` (Swagger UI).
 
 ## Cơ sở dữ liệu
 
-Schema được khởi tạo từ `database/init.sql` (PostgreSQL):
+Schema được quản lý bằng **Alembic** (`backend/alembic/`), áp bằng:
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+### Tạo tài khoản admin hệ thống + dữ liệu demo
+
+`super_admin` (chủ hệ thống) **không đăng ký qua API** — tạo bằng script seed:
+
+```bash
+cd backend
+$env:PYTHONPATH = "D:\TTTN\AI-Document-Manager\backend"   # Windows
+python ..\scripts\seed_data.py
+```
+
+Kết quả tạo:
+- `super_admin`: `admin@example.com` / `admin123456` (đổi qua env `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`)
+- 2 tổ chức demo (`Cong ty Alpha`, `Truong Dai hoc Beta`) — mỗi org có 1 manager + 2 staff
+- 1 cá nhân (`individual.z@example.com` / `demo123456`)
+
+Tất cả tài khoản demo dùng mật khẩu `demo123456`.
+
+| Vai trò | Email | Mật khẩu |
+|---|---|---|
+| Admin hệ thống | `admin@example.com` | `admin123456` |
+| Quản lý org Alpha | `manager.alpha@example.com` | `demo123456` |
+| Nhân viên org Alpha | `staff.a1@example.com` | `demo123456` |
+| Quản lý org Beta | `manager.beta@example.com` | `demo123456` |
+| Cá nhân | `individual.z@example.com` | `demo123456` |
 
 | Bảng | Mô tả |
 |---|---|
-| `users` | Người dùng (full_name, email, hashed_password, role) |
-| `folders` | Thư mục, hỗ trợ cây phân cấp (parent_id) |
-| `documents` | Tài liệu (title, file_path, folder_id, owner_id, status) |
+| `organizations` | Tổ chức (tên, ngày tạo) |
+| `users` | Người dùng (full_name, email, hashed_password, role, organization_id) |
+| `folders` | Thư mục, hỗ trợ cây phân cấp (parent_id), theo tổ chức/cá nhân |
+| `documents` | Tài liệu (title, file_path, folder_id, owner_id, status, current_version) |
 | `document_versions` | Phiên bản tài liệu |
-| `permissions` | Phân quyền truy cập |
+| `permissions` | Phân quyền truy cập theo tài liệu |
 | `audit_logs` | Nhật ký chỉnh sửa |
 | `chats` | Hội thoại hỏi đáp |
+| `chat_messages` | Tin nhắn trong hội thoại (role, content) |
+| `password_reset_tokens` | Token đặt lại mật khẩu (hạn 60 phút, dùng 1 lần) |
 
 Ngoài ra, embeddings của tài liệu được lưu trong **Qdrant** (vector database) phục vụ tìm kiếm ngữ nghĩa và RAG.
+
+**Sơ đồ ERD đầy đủ**: [`docs/diagrams/ERD.md`](docs/diagrams/ERD.md) (Mermaid, hiển thị trên GitHub).
 
 ## Luồng sử dụng
 
 ```
-Đăng ký / Đăng nhập
+Đăng ký (Cá nhân / Tạo tổ chức)
+        │
+        ▼
+Đăng nhập → chuyển theo vai trò:
+  ├── Admin hệ thống → trang quản trị tổ chức & người dùng
+  ├── Quản lý (manager) → quản lý nhân viên + toàn quyền tài liệu của tổ chức
+  ├── Nhân viên (staff) → xem/chỉnh sửa tài liệu trong tổ chức
+  └── Cá nhân (individual) → tài liệu riêng của mình
         │
         ▼
 Upload tài liệu (PDF/ảnh/DOCX)
@@ -183,7 +260,7 @@ Người dùng khai thác:
   └── Quản lý phiên bản + nhật ký chỉnh sửa
         │
         ▼
-Admin: quản lý người dùng, phân quyền, giám sát hệ thống
+Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ thống
 ```
 
 ## Sản phẩm
@@ -195,4 +272,15 @@ Admin: quản lý người dùng, phân quyền, giám sát hệ thống
 
 ## Trạng thái phát triển
 
-> Dự án đang ở giai đoạn khung (scaffold). Frontend có cấu trúc trang và routing; backend có khung route, model, service; `GET /` và `GET /health` đã hoạt động. Các tính năng còn lại đang được triển khai.
+> Dự án phát triển theo từng giai đoạn, mỗi giai đoạn hoàn thiện một mảng tính năng. Toàn bộ **schema DB đã dựng đủ** (11 bảng) ngay từ đầu.
+
+| Giai đoạn | Nội dung | Trạng thái |
+|---|---|---|
+| 0 | Hạ tầng: FastAPI + PostgreSQL + Alembic, `GET /` và `GET /health` | ✅ Hoàn thành |
+| 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu | ✅ Hoàn thành |
+| 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ⏳ Chưa bắt đầu |
+| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant | ⏳ Chưa bắt đầu |
+| 4 | Search + Chat (RAG) | ⏳ Chưa bắt đầu |
+| 5 | Nâng cao: summary, phân loại, permissions chi tiết, version, audit log | ⏳ Chưa bắt đầu |
+
+> ✅ = hoàn thành, 🔄 = đang triển khai, ⏳ = chưa bắt đầu.
