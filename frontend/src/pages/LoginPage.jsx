@@ -1,25 +1,93 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
-function LoginPage() {
+import Button from "../components/ui/Button.jsx";
+import { useAuth } from "../hooks/useAuth";
+import { homeForRole } from "../utils/roles";
+
+export default function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || null;
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      const user = await login({ email, password });
+      navigate(from || homeForRole(user.role), { replace: true });
+    } catch (err) {
+      setError(err.message || "Đăng nhập thất bại");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Đăng nhập</h1>
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-introduction">
+          <h1>AI Document Manager</h1>
+          <p>
+            Hệ thống quản lý tài liệu thông minh: lưu trữ, tìm kiếm ngữ nghĩa
+            và hỏi đáp theo tài liệu bằng AI.
+          </p>
+        </div>
 
-      <input type="email" placeholder="Email" />
-      <br />
-      <br />
+        <div className="auth-form">
+          <h2>Đăng nhập</h2>
+          <p className="auth-description">Nhập email và mật khẩu để tiếp tục</p>
 
-      <input type="password" placeholder="Mật khẩu" />
-      <br />
-      <br />
+          {error && <div className="error-message">{error}</div>}
 
-      <button type="button">Đăng nhập</button>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Mật khẩu</label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
 
-      <p>
-        Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
-      </p>
+            <div className="form-options">
+              <span></span>
+              <Link to="/forgot-password" className="text-button">
+                Quên mật khẩu?
+              </Link>
+            </div>
+
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Đang xử lý..." : "Đăng nhập"}
+            </Button>
+          </form>
+
+          <p className="switch-page">
+            Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
-
-export default LoginPage;

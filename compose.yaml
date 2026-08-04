@@ -9,6 +9,9 @@ services:
   backend:
     build: ./backend
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/ai_document_manager
+      VECTOR_DB_URL: http://vector-db:6333
     ports:
       - "8000:8000"
     volumes:

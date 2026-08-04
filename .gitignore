@@ -32,3 +32,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Personal notes
+NOTES.md

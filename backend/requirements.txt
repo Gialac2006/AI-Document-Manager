@@ -3,6 +3,12 @@ uvicorn[standard]
 python-dotenv
 psycopg2-binary
 sqlalchemy
+alembic
 pymupdf
 pytesseract
 pydantic
+bcrypt
+python-jose[cryptography]
+email-validator
+httpx
+pytest
