@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 import { authApi } from "../api/authApi";
+import type { LoginCredentials, RegisterPayload } from "../api/authApi";
 import { setToken } from "../api/httpClient";
-import { AuthContext } from "./authContext.js";
+import type { User } from "../types";
+import { AuthContext } from "./authContext.ts";
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,13 +27,13 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (credentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     const loggedInUser = await authApi.login(credentials);
     setUser(loggedInUser);
     return loggedInUser;
   }, []);
 
-  const register = useCallback(async (data) => {
+  const register = useCallback(async (data: RegisterPayload) => {
     const newUser = await authApi.register(data);
     return newUser;
   }, []);

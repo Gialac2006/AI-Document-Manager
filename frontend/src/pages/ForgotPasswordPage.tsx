@@ -1,16 +1,19 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { authApi } from "../api/authApi";
-import Button from "../components/ui/Button.jsx";
+import AuthIntro from "../components/ui/AuthIntro.tsx";
+import Button from "../components/ui/Button.tsx";
+import type { ForgotPasswordResponse } from "../types";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<ForgotPasswordResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setResult(null);
@@ -19,7 +22,7 @@ export default function ForgotPasswordPage() {
       const data = await authApi.forgotPassword(email);
       setResult(data);
     } catch (err) {
-      setError(err.message || "Không thể gửi yêu cầu");
+      setError((err as Error).message || "Không thể gửi yêu cầu");
     } finally {
       setSubmitting(false);
     }
@@ -28,10 +31,10 @@ export default function ForgotPasswordPage() {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        <div className="auth-introduction">
-          <h1>AI Document Manager</h1>
-          <p>Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu.</p>
-        </div>
+        <AuthIntro
+          title="Khôi phục mật khẩu"
+          description="Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu."
+        />
 
         <div className="auth-form">
           <h2>Quên mật khẩu</h2>

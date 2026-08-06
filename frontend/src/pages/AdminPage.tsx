@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 import { adminApi } from "../api/adminApi";
 import { userApi } from "../api/userApi";
-import Button from "../components/ui/Button.jsx";
+import Button from "../components/ui/Button.tsx";
 import { useAuth } from "../hooks/useAuth";
+import type { Organization, User, UserRole } from "../types";
 import { ROLE_LABELS } from "../utils/roles";
 
-const ROLE_OPTIONS = [
+const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "staff", label: "Nhân viên" },
   { value: "manager", label: "Quản lý" },
   { value: "individual", label: "Cá nhân" },
 ];
 
-function formatDate(value) {
+function formatDate(value?: string) {
   if (!value) return "";
   return new Date(value).toLocaleDateString("vi-VN");
 }
@@ -28,27 +30,37 @@ export default function AdminPage() {
   );
 }
 
-function Alert({ type, children }) {
+function Alert({ type, children }: { type: string; children?: ReactNode }) {
   if (!children) return null;
   return <div className={`alert alert-${type}`}>{children}</div>;
 }
 
+interface NewUserForm {
+  full_name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  organization_id: string;
+}
+
+const EMPTY_NEW_USER: NewUserForm = {
+  full_name: "",
+  email: "",
+  password: "",
+  role: "staff",
+  organization_id: "",
+};
+
 function SuperAdminPanel() {
-  const [organizations, setOrganizations] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [orgName, setOrgName] = useState("");
-  const [expandedOrg, setExpandedOrg] = useState(null);
-  const [orgMembers, setOrgMembers] = useState([]);
+  const [expandedOrg, setExpandedOrg] = useState<number | null>(null);
+  const [orgMembers, setOrgMembers] = useState<User[]>([]);
 
-  const [newUser, setNewUser] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-    role: "staff",
-    organization_id: "",
-  });
+  const [newUser, setNewUser] = useState<NewUserForm>(EMPTY_NEW_USER);
 
   const load = useCallback(async () => {
     const [orgs, usrs] = await Promise.all([
@@ -60,10 +72,10 @@ function SuperAdminPanel() {
   }, []);
 
   useEffect(() => {
-    load().catch((err) => setError(err.message));
+    load().catch((err) => setError((err as Error).message));
   }, [load]);
 
-  const handleCreateOrg = async (e) => {
+  const handleCreateOrg = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setMessage("");
@@ -73,11 +85,11 @@ function SuperAdminPanel() {
       setMessage("Đã tạo tổ chức");
       await load();
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
-  const handleDeleteOrg = async (id) => {
+  const handleDeleteOrg = async (id: number) => {
     if (!window.confirm("Xoá tổ chức và toàn bộ người dùng bên trong?")) return;
     setError("");
     setMessage("");
@@ -86,11 +98,11 @@ function SuperAdminPanel() {
       setMessage("Đã xoá tổ chức");
       await load();
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
-  const toggleOrg = async (id) => {
+  const toggleOrg = async (id: number) => {
     if (expandedOrg === id) {
       setExpandedOrg(null);
       setOrgMembers([]);
@@ -101,11 +113,11 @@ function SuperAdminPanel() {
       setOrgMembers(detail.members || []);
       setExpandedOrg(id);
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
-  const handleCreateUser = async (e) => {
+  const handleCreateUser = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setMessage("");
@@ -119,21 +131,15 @@ function SuperAdminPanel() {
           ? Number(newUser.organization_id)
           : null,
       });
-      setNewUser({
-        full_name: "",
-        email: "",
-        password: "",
-        role: "staff",
-        organization_id: "",
-      });
+      setNewUser(EMPTY_NEW_USER);
       setMessage("Đã tạo người dùng");
       await load();
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
-  const handleDeleteUser = async (id) => {
+  const handleDeleteUser = async (id: number) => {
     if (!window.confirm("Xoá người dùng này?")) return;
     setError("");
     setMessage("");
@@ -142,7 +148,7 @@ function SuperAdminPanel() {
       setMessage("Đã xoá người dùng");
       await load();
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
@@ -152,7 +158,7 @@ function SuperAdminPanel() {
       <Alert type="success">{message}</Alert>
 
       <section className="panel">
-        <h2>Tổ chức</h2>
+        <h2 className="panel-title">Tổ chức</h2>
 
         <form className="inline-form" onSubmit={handleCreateOrg}>
           <input
@@ -192,7 +198,7 @@ function SuperAdminPanel() {
       </section>
 
       <section className="panel">
-        <h2>Người dùng hệ thống</h2>
+        <h2 className="panel-title">Người dùng hệ thống</h2>
 
         <form className="create-user-form" onSubmit={handleCreateUser}>
           <input
@@ -223,7 +229,9 @@ function SuperAdminPanel() {
           />
           <select
             value={newUser.role}
-            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+            onChange={(e) =>
+              setNewUser({ ...newUser, role: e.target.value as UserRole })
+            }
           >
             {ROLE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -288,7 +296,15 @@ function SuperAdminPanel() {
   );
 }
 
-function OrganizationRow({ org, expanded, members, onToggle, onDelete }) {
+interface OrganizationRowProps {
+  org: Organization;
+  expanded: boolean;
+  members: User[];
+  onToggle: () => void;
+  onDelete: () => void;
+}
+
+function OrganizationRow({ org, expanded, members, onToggle, onDelete }: OrganizationRowProps) {
   return (
     <>
       <tr>
@@ -326,15 +342,23 @@ function OrganizationRow({ org, expanded, members, onToggle, onDelete }) {
   );
 }
 
+interface NewStaffForm {
+  full_name: string;
+  email: string;
+  password: string;
+}
+
+const EMPTY_NEW_STAFF: NewStaffForm = {
+  full_name: "",
+  email: "",
+  password: "",
+};
+
 function ManagerPanel() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [newUser, setNewUser] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-  });
+  const [newUser, setNewUser] = useState<NewStaffForm>(EMPTY_NEW_STAFF);
 
   const load = useCallback(async () => {
     const usrs = await userApi.list();
@@ -342,10 +366,10 @@ function ManagerPanel() {
   }, []);
 
   useEffect(() => {
-    load().catch((err) => setError(err.message));
+    load().catch((err) => setError((err as Error).message));
   }, [load]);
 
-  const handleCreateStaff = async (e) => {
+  const handleCreateStaff = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setMessage("");
@@ -355,15 +379,15 @@ function ManagerPanel() {
         email: newUser.email,
         password: newUser.password,
       });
-      setNewUser({ full_name: "", email: "", password: "" });
+      setNewUser(EMPTY_NEW_STAFF);
       setMessage("Đã thêm nhân viên");
       await load();
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
-  const handleDeleteStaff = async (id) => {
+  const handleDeleteStaff = async (id: number) => {
     if (!window.confirm("Xoá nhân viên này?")) return;
     setError("");
     setMessage("");
@@ -372,7 +396,7 @@ function ManagerPanel() {
       setMessage("Đã xoá nhân viên");
       await load();
     } catch (err) {
-      setError(err.message);
+      setError((err as Error).message);
     }
   };
 
@@ -382,7 +406,7 @@ function ManagerPanel() {
       <Alert type="success">{message}</Alert>
 
       <section className="panel">
-        <h2>Nhân viên trong tổ chức</h2>
+        <h2 className="panel-title">Nhân viên trong tổ chức</h2>
         <p className="muted">Thêm và quản lý nhân viên của tổ chức bạn.</p>
 
         <form className="create-user-form" onSubmit={handleCreateStaff}>

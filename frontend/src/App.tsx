@@ -1,17 +1,17 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import MainLayout from "./layouts/MainLayout.jsx";
-import AdminPage from "./pages/AdminPage.jsx";
-import ChatPage from "./pages/ChatPage.jsx";
-import DashboardPage from "./pages/DashboardPage.jsx";
-import DocumentDetailPage from "./pages/DocumentDetailPage.jsx";
-import DocumentsPage from "./pages/DocumentsPage.jsx";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
-import LoginPage from "./pages/LoginPage.jsx";
-import RegisterPage from "./pages/RegisterPage.jsx";
-import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
-import SearchPage from "./pages/SearchPage.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
+import MainLayout from "./layouts/MainLayout.tsx";
+import AdminPage from "./pages/AdminPage.tsx";
+import ChatPage from "./pages/ChatPage.tsx";
+import DashboardPage from "./pages/DashboardPage.tsx";
+import DocumentDetailPage from "./pages/DocumentDetailPage.tsx";
+import DocumentsPage from "./pages/DocumentsPage.tsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
+import LoginPage from "./pages/LoginPage.tsx";
+import RegisterPage from "./pages/RegisterPage.tsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
+import SearchPage from "./pages/SearchPage.tsx";
 
 function App() {
   return (

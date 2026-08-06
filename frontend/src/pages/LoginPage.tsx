@@ -1,7 +1,9 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import Button from "../components/ui/Button.jsx";
+import AuthIntro from "../components/ui/AuthIntro.tsx";
+import Button from "../components/ui/Button.tsx";
 import { useAuth } from "../hooks/useAuth";
 import { homeForRole } from "../utils/roles";
 
@@ -16,7 +18,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
@@ -24,7 +26,7 @@ export default function LoginPage() {
       const user = await login({ email, password });
       navigate(from || homeForRole(user.role), { replace: true });
     } catch (err) {
-      setError(err.message || "Đăng nhập thất bại");
+      setError((err as Error).message || "Đăng nhập thất bại");
     } finally {
       setSubmitting(false);
     }
@@ -33,13 +35,10 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        <div className="auth-introduction">
-          <h1>AI Document Manager</h1>
-          <p>
-            Hệ thống quản lý tài liệu thông minh: lưu trữ, tìm kiếm ngữ nghĩa
-            và hỏi đáp theo tài liệu bằng AI.
-          </p>
-        </div>
+        <AuthIntro
+          title="Quản lý tài liệu thông minh"
+          description="Lưu trữ, tìm kiếm ngữ nghĩa và hỏi đáp theo tài liệu bằng AI cho doanh nghiệp, trường học và cơ quan."
+        />
 
         <div className="auth-form">
           <h2>Đăng nhập</h2>

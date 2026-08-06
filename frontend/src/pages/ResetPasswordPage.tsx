@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { authApi } from "../api/authApi";
-import Button from "../components/ui/Button.jsx";
+import AuthIntro from "../components/ui/AuthIntro.tsx";
+import Button from "../components/ui/Button.tsx";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -28,7 +30,7 @@ export default function ResetPasswordPage() {
       .finally(() => setValidating(false));
   }, [token]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     if (password !== confirm) {
@@ -40,13 +42,13 @@ export default function ResetPasswordPage() {
       await authApi.resetPassword(token, password);
       setSuccess(true);
     } catch (err) {
-      setError(err.message || "Không thể đặt lại mật khẩu");
+      setError((err as Error).message || "Không thể đặt lại mật khẩu");
     } finally {
       setSubmitting(false);
     }
   };
 
-  let content;
+  let content: ReactNode;
   if (validating) {
     content = <p className="auth-description">Đang kiểm tra link...</p>;
   } else if (!valid) {
@@ -109,10 +111,10 @@ export default function ResetPasswordPage() {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        <div className="auth-introduction">
-          <h1>AI Document Manager</h1>
-          <p>Nhập mật khẩu mới cho tài khoản của bạn.</p>
-        </div>
+        <AuthIntro
+          title="Đặt lại mật khẩu"
+          description="Nhập mật khẩu mới cho tài khoản của bạn."
+        />
 
         <div className="auth-form">
           <h2>Đặt lại mật khẩu</h2>

@@ -1,7 +1,9 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import Button from "../components/ui/Button.jsx";
+import AuthIntro from "../components/ui/AuthIntro.tsx";
+import Button from "../components/ui/Button.tsx";
 import { useAuth } from "../hooks/useAuth";
 
 export default function RegisterPage() {
@@ -17,7 +19,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
@@ -30,7 +32,7 @@ export default function RegisterPage() {
       });
       setSuccess(true);
     } catch (err) {
-      setError(err.message || "Đăng ký thất bại");
+      setError((err as Error).message || "Đăng ký thất bại");
     } finally {
       setSubmitting(false);
     }
@@ -39,13 +41,10 @@ export default function RegisterPage() {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        <div className="auth-introduction">
-          <h1>AI Document Manager</h1>
-          <p>
-            Đăng ký cá nhân để dùng riêng, hoặc tạo tổ chức để quản lý tài liệu
-            chung cho đội nhóm của bạn.
-          </p>
-        </div>
+        <AuthIntro
+          title="Đăng ký tài khoản"
+          description="Đăng ký cá nhân để dùng riêng, hoặc tạo tổ chức để quản lý tài liệu chung cho đội nhóm của bạn."
+        />
 
         <div className="auth-form">
           <h2>Đăng ký</h2>
