@@ -62,7 +62,7 @@ Hệ thống phân biệt **admin hệ thống** và **người dùng trong tổ
 
 | Thành phần | Công nghệ |
 |---|---|
-| Frontend | React 19, React Router, Vite 8 |
+| Frontend | React 19, React Router, Vite 8, TypeScript |
 | Backend | FastAPI (Python) |
 | Cơ sở dữ liệu | PostgreSQL |
 | Vector Database | Qdrant (hoặc Chroma) |
@@ -74,17 +74,21 @@ Hệ thống phân biệt **admin hệ thống** và **người dùng trong tổ
 
 ```
 ai-document-manager/
-├── frontend/                    # React + Vite
+├── frontend/                    # React + Vite + TypeScript
 │   ├── src/
 │   │   ├── api/                 # authApi, documentApi, folderApi, chatApi
 │   │   ├── components/          # DocumentCard, UploadDocument, FolderTree, SearchBar, ChatBox
 │   │   ├── pages/               # Login, Register, Dashboard, Documents, Chat, Search, Admin
 │   │   ├── layouts/             # MainLayout
+│   │   ├── context/             # AuthContext (auth context + provider)
 │   │   ├── hooks/               # useAuth
-│   │   ├── utils/               # format
-│   │   ├── styles/              # auth, login
-│   │   ├── App.jsx              # định nghĩa routes
-│   │   └── main.jsx
+│   │   ├── utils/               # format, roles
+│   │   ├── types.ts             # shared API types
+│   │   ├── index.css
+│   │   ├── App.tsx              # định nghĩa routes
+│   │   └── main.tsx
+│   ├── tsconfig.json
+│   ├── vite.config.ts
 │   ├── Dockerfile
 │   └── nginx.conf               # SPA + proxy /api
 │
@@ -170,12 +174,12 @@ uvicorn app.main:app --reload
 | GET | `/api/v1/admin/organizations/{id}` | Chi tiết tổ chức + thành viên (super_admin) | ✅ |
 | DELETE | `/api/v1/admin/organizations/{id}` | Xoá tổ chức (super_admin) | ✅ |
 | GET | `/api/v1/admin/users` | Danh sách mọi người dùng (super_admin) | ✅ |
-| GET/POST | `/api/v1/folders` | Danh sách / tạo thư mục | ⏳ |
-| PUT/DELETE | `/api/v1/folders/{id}` | Đổi tên / xoá thư mục | ⏳ |
-| GET/POST | `/api/v1/documents` | Danh sách / upload tài liệu | ⏳ |
-| GET/PUT/DELETE | `/api/v1/documents/{id}` | Chi tiết / cập nhật / xoá tài liệu | ⏳ |
-| GET | `/api/v1/documents/{id}/download` | Tải tài liệu | ⏳ |
-| GET | `/api/v1/documents/{id}/versions` | Lịch sử phiên bản | ⏳ |
+| GET/POST | `/api/v1/folders` | Danh sách / tạo thư mục | ✅ |
+| PUT/DELETE | `/api/v1/folders/{id}` | Đổi tên / xoá thư mục | ✅ |
+| GET/POST | `/api/v1/documents` | Danh sách / upload tài liệu | ✅ |
+| GET/PUT/DELETE | `/api/v1/documents/{id}` | Chi tiết / cập nhật / xoá tài liệu | ✅ |
+| GET | `/api/v1/documents/{id}/download` | Tải tài liệu | ✅ |
+| GET | `/api/v1/documents/{id}/versions` | Lịch sử phiên bản | ✅ |
 | GET | `/api/v1/search?q=...` | Tìm kiếm ngữ nghĩa | ⏳ |
 | POST | `/api/v1/chat` | Hỏi đáp theo tài liệu (RAG) | ⏳ |
 
@@ -278,8 +282,8 @@ Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ th�
 |---|---|---|
 | 0 | Hạ tầng: FastAPI + PostgreSQL + Alembic, `GET /` và `GET /health` | ✅ Hoàn thành |
 | 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu | ✅ Hoàn thành |
-| 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ⏳ Chưa bắt đầu |
-| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant | ⏳ Chưa bắt đầu |
+| 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ✅ Hoàn thành |
+| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant-Doanh nghiệp /chroma | ⏳ Chưa bắt đầu |
 | 4 | Search + Chat (RAG) | ⏳ Chưa bắt đầu |
 | 5 | Nâng cao: summary, phân loại, permissions chi tiết, version, audit log | ⏳ Chưa bắt đầu |
 
