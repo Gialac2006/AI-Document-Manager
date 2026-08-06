@@ -21,6 +21,10 @@ class Settings:
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost")
     vector_db_url: str = os.getenv("VECTOR_DB_URL", "")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
+    storage_path: str = os.getenv("STORAGE_PATH", "storage/uploads")
+    max_upload_size: int = int(
+        os.getenv("MAX_UPLOAD_SIZE", str(100 * 1024 * 1024))
+    )
 
 
 settings = Settings()

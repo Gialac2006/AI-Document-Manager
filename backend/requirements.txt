@@ -10,5 +10,6 @@ pydantic
 bcrypt
 python-jose[cryptography]
 email-validator
+python-multipart
 httpx
 pytest
