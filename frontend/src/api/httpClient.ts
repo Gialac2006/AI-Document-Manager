@@ -65,6 +65,7 @@ export async function request<T = unknown>(
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
+      cache: "no-store",
       body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
     });
   } catch {

@@ -3,24 +3,8 @@ import { Link } from "react-router-dom";
 import { documentApi } from "../api/documentApi";
 import { useAuth } from "../hooks/useAuth";
 import type { Document } from "../types";
+import { fileTypeInfo, statusInfo } from "../utils/documentMeta";
 import { formatDate } from "../utils/format";
-
-const FILE_META: Record<string, { icon: string; className: string }> = {
-  ".pdf": { icon: "📕", className: "pdf" },
-  ".doc": { icon: "📘", className: "doc" },
-  ".docx": { icon: "📘", className: "doc" },
-  ".xls": { icon: "📊", className: "xls" },
-  ".xlsx": { icon: "📊", className: "xls" },
-  ".csv": { icon: "📊", className: "xls" },
-  ".ppt": { icon: "📽️", className: "doc" },
-  ".pptx": { icon: "📽️", className: "doc" },
-  ".txt": { icon: "📝", className: "" },
-  ".md": { icon: "📝", className: "" },
-  ".png": { icon: "🖼️", className: "img" },
-  ".jpg": { icon: "🖼️", className: "img" },
-  ".jpeg": { icon: "🖼️", className: "img" },
-  ".gif": { icon: "🖼️", className: "img" },
-};
 
 interface DocumentCardProps {
   document: Document;
@@ -30,11 +14,12 @@ interface DocumentCardProps {
 export default function DocumentCard({ document, onDelete }: DocumentCardProps) {
   const { user } = useAuth();
   const canDelete = user?.role !== "staff";
-  const meta = FILE_META[document.file_type || ""] || { icon: "📄", className: "" };
+  const meta = fileTypeInfo(document.file_name, document.file_type);
+  const status = statusInfo(document.status);
 
   return (
     <div className="document-card">
-      <div className={`document-card-icon ${meta.className}`}>{meta.icon}</div>
+      <div className={`document-card-icon ${meta.cls}`}>{meta.icon}</div>
       <div className="document-card-body">
         <Link to={`/documents/${document.id}`} className="document-card-title">
           {document.title}
@@ -42,17 +27,18 @@ export default function DocumentCard({ document, onDelete }: DocumentCardProps) 
         <div className="document-card-meta">
           <span>{document.file_name}</span>
           <span>🕒 {formatDate(document.updated_at)}</span>
-          <span className="badge">Phiên bản {document.current_version}</span>
+          <span className={`status-badge ${status.cls}`}>{status.label}</span>
         </div>
       </div>
       <div className="document-card-actions">
-        <a
-          href={documentApi.downloadUrl(document.id)}
+        <button
+          type="button"
           className="icon-button"
           title="Tải xuống"
+          onClick={() => documentApi.download(document.id, document.file_name)}
         >
           ⬇️
-        </a>
+        </button>
         {canDelete && (
           <button
             type="button"

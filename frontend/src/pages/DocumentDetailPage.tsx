@@ -3,10 +3,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
+import DocumentPreview from "../components/DocumentPreview.tsx";
 import Button from "../components/ui/Button.tsx";
 import Spinner from "../components/ui/Spinner.tsx";
 import { useAuth } from "../hooks/useAuth";
 import type { Document, DocumentVersion, Folder } from "../types";
+import { fileTypeInfo, isPreviewable, statusInfo } from "../utils/documentMeta";
 import { formatDate } from "../utils/format";
 
 export default function DocumentDetailPage() {
@@ -87,24 +89,37 @@ export default function DocumentDetailPage() {
   }
 
   const canDelete = user?.role !== "staff";
+  const meta = fileTypeInfo(document.file_name, document.file_type);
+  const status = statusInfo(document.status);
+  const previewable = isPreviewable(document.file_name, document.file_type);
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <Link to="/documents" className="text-button" style={{ marginBottom: "6px", display: "inline-block" }}>
+          <Link
+            to="/documents"
+            className="text-button"
+            style={{ marginBottom: "6px", display: "inline-block" }}
+          >
             ← Quay lại tài liệu
           </Link>
-          <h1>{document.title}</h1>
-          <p className="page-header-desc">{document.file_name}</p>
+          <div className="doc-detail-title-row">
+            <h1>{document.title}</h1>
+            <span className={`status-badge ${status.cls}`}>{status.label}</span>
+          </div>
+          <p className="page-header-desc">
+            <span className={`doc-type-icon ${meta.cls}`}>{meta.icon}</span>{" "}
+            {document.file_name}
+          </p>
         </div>
         <div className="row-actions" style={{ marginTop: "0" }}>
-          <a
-            href={documentApi.downloadUrl(document.id)}
-            className="secondary-button"
+          <Button
+            variant="secondary"
+            onClick={() => documentApi.download(document.id, document.file_name)}
           >
             ⬇️ Tải xuống
-          </a>
+          </Button>
           {!editing && (
             <Button variant="secondary" onClick={() => setEditing(true)}>
               Sửa
@@ -120,95 +135,140 @@ export default function DocumentDetailPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="admin-panels">
-        <section className="panel">
-          <h2 className="panel-title">
-            Thông tin tài liệu
-            {document.status && <span className="badge">{document.status}</span>}
-          </h2>
+      <div className="detail-grid">
+        <div className="detail-main">
+          <section className="panel">
+            <h2 className="panel-title">Xem trước</h2>
+            {previewable ? (
+              <DocumentPreview
+                documentId={document.id}
+                fileName={document.file_name}
+                fileType={document.file_type}
+              />
+            ) : (
+              <div className="empty-state">
+                <span className="empty-icon">📄</span>
+                Loại file này chưa hỗ trợ xem trước. Tải xuống để mở bằng phần
+                mềm phù hợp.
+              </div>
+            )}
+          </section>
 
-          {editing ? (
-            <div>
-              <div className="form-group">
-                <label>Tiêu đề</label>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <section className="panel">
+            <h2 className="panel-title">Thông tin tài liệu</h2>
+            {editing ? (
+              <div>
+                <div className="form-group">
+                  <label>Tiêu đề</label>
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Thư mục</label>
+                  <select
+                    value={folderId}
+                    onChange={(e) => setFolderId(e.target.value)}
+                  >
+                    <option value="">— Gốc —</option>
+                    {folders.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="row-actions">
+                  <Button variant="primary" onClick={handleSave}>
+                    Lưu thay đổi
+                  </Button>
+                  <Button variant="text" onClick={() => setEditing(false)}>
+                    Huỷ
+                  </Button>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Thư mục</label>
-                <select value={folderId} onChange={(e) => setFolderId(e.target.value)}>
-                  <option value="">— Gốc —</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
+            ) : (
+              <div className="detail-meta-grid">
+                <div className="detail-meta-item">
+                  <div className="detail-meta-label">Tên file</div>
+                  <div className="detail-meta-value">{document.file_name}</div>
+                </div>
+                <div className="detail-meta-item">
+                  <div className="detail-meta-label">Loại file</div>
+                  <div className="detail-meta-value">
+                    {document.file_type?.toUpperCase() || "—"}
+                  </div>
+                </div>
+                <div className="detail-meta-item">
+                  <div className="detail-meta-label">Phiên bản hiện tại</div>
+                  <div className="detail-meta-value">
+                    v{document.current_version}
+                  </div>
+                </div>
+                <div className="detail-meta-item">
+                  <div className="detail-meta-label">Ngày tạo</div>
+                  <div className="detail-meta-value">
+                    {formatDate(document.created_at)}
+                  </div>
+                </div>
+                <div className="detail-meta-item">
+                  <div className="detail-meta-label">Ngày cập nhật</div>
+                  <div className="detail-meta-value">
+                    {formatDate(document.updated_at)}
+                  </div>
+                </div>
               </div>
-              <div className="row-actions">
-                <Button variant="primary" onClick={handleSave}>
-                  Lưu thay đổi
-                </Button>
-                <Button variant="text" onClick={() => setEditing(false)}>
-                  Huỷ
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="detail-meta-grid">
-              <div className="detail-meta-item">
-                <div className="detail-meta-label">Tên file</div>
-                <div className="detail-meta-value">{document.file_name}</div>
-              </div>
-              <div className="detail-meta-item">
-                <div className="detail-meta-label">Loại file</div>
-                <div className="detail-meta-value">{document.file_type || "—"}</div>
-              </div>
-              <div className="detail-meta-item">
-                <div className="detail-meta-label">Phiên bản hiện tại</div>
-                <div className="detail-meta-value">v{document.current_version}</div>
-              </div>
-              <div className="detail-meta-item">
-                <div className="detail-meta-label">Ngày cập nhật</div>
-                <div className="detail-meta-value">{formatDate(document.updated_at)}</div>
-              </div>
-              <div className="detail-meta-item">
-                <div className="detail-meta-label">Ngày tạo</div>
-                <div className="detail-meta-value">{formatDate(document.created_at)}</div>
-              </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        </div>
 
-        <section className="panel">
-          <h2 className="panel-title">Lịch sử phiên bản</h2>
-          {versions.length === 0 ? (
-            <div className="empty-state">
-              <span className="empty-icon">🗃️</span>
-              Chưa có phiên bản nào.
+        <aside className="detail-side">
+          <section className="panel">
+            <h2 className="panel-title">Trạng thái AI</h2>
+            <div className="ai-status-card">
+              <span className={`status-badge ${status.cls}`}>
+                {status.label}
+              </span>
+              <p className="ai-status-desc">
+                {status.cls === "indexed" &&
+                  "Tài liệu đã được OCR và đưa vào chỉ mục tìm kiếm."}
+                {status.cls === "processing" &&
+                  "Tài liệu đang được AI xử lý. Vui lòng chờ trong giây lát."}
+                {status.cls === "neutral" &&
+                  "Tài liệu chưa qua xử lý. Hệ thống sẽ chạy OCR/AI trong Giai đoạn 3."}
+              </p>
             </div>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Phiên bản</th>
-                  <th>Tên file</th>
-                  <th>Thời điểm</th>
-                </tr>
-              </thead>
-              <tbody>
-                {versions.map((v) => (
-                  <tr key={v.id}>
-                    <td>
-                      <span className="badge">v{v.version}</span>
-                    </td>
-                    <td>{v.file_name}</td>
-                    <td>{formatDate(v.created_at)}</td>
+          </section>
+
+          <section className="panel">
+            <h2 className="panel-title">Lịch sử phiên bản</h2>
+            {versions.length === 0 ? (
+              <div className="empty-state">
+                <span className="empty-icon">🗃️</span>
+                Chưa có phiên bản nào.
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Phiên bản</th>
+                    <th>Tên file</th>
+                    <th>Thời điểm</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
+                </thead>
+                <tbody>
+                  {versions.map((v) => (
+                    <tr key={v.id}>
+                      <td>
+                        <span className="badge">v{v.version}</span>
+                      </td>
+                      <td>{v.file_name}</td>
+                      <td>{formatDate(v.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </aside>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { authApi } from "../api/authApi";
 import AuthIntro from "../components/ui/AuthIntro.tsx";
 import Button from "../components/ui/Button.tsx";
+import PasswordInput from "../components/ui/PasswordInput.tsx";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -78,9 +79,8 @@ export default function ResetPasswordPage() {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="password">Mật khẩu mới (tối thiểu 6 ký tự)</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             minLength={6}
             value={password}
@@ -90,9 +90,8 @@ export default function ResetPasswordPage() {
         </div>
         <div className="form-group">
           <label htmlFor="confirm">Xác nhận mật khẩu</label>
-          <input
+          <PasswordInput
             id="confirm"
-            type="password"
             required
             minLength={6}
             value={confirm}
