@@ -58,6 +58,11 @@ Hệ thống phân biệt **admin hệ thống** và **người dùng trong tổ
 - `manager` thêm/thu hồi nhân viên trong trang quản trị của tổ chức.
 - `super_admin` (chủ hệ thống) tạo/quản lý mọi tổ chức từ trang Admin hệ thống.
 
+**Cá nhân gia nhập tổ chức (quyết định thiết kế):**
+- Hệ thống **không có cơ chế để người dùng `individual` tự join vào tổ chức có sẵn** (không mã mời, không link invite, không yêu cầu duyệt).
+- Khi một người cần làm việc trong tổ chức, **tổ chức cung cấp tài khoản**: `manager` tạo nhân viên (`POST /api/v1/users`) hoặc `super_admin` tạo tài khoản và gán tổ chức — account do tổ chức cấp phát, người dùng đăng nhập bằng account đó.
+- Triển khai này giữ cho phạm vi dữ liệu chặt chẽ và giao kiểm soát thành viên hoàn toàn cho `manager`/`super_admin`, phù hợp yêu cầu phân vai của đề bài.
+
 ## Tech stack
 
 | Thành phần | Công nghệ |
@@ -77,12 +82,13 @@ ai-document-manager/
 ├── frontend/                    # React + Vite + TypeScript
 │   ├── src/
 │   │   ├── api/                 # authApi, documentApi, folderApi, chatApi
-│   │   ├── components/          # DocumentCard, UploadDocument, FolderTree, SearchBar, ChatBox
-│   │   ├── pages/               # Login, Register, Dashboard, Documents, Chat, Search, Admin
+│   │   ├── components/          # DocumentCard, UploadDocument, FolderTree, SearchBar, ChatBox, DocumentPreview
+│   │   │   └── ui/              # Button, PasswordInput, AuthIntro, Spinner
+│   │   ├── pages/               # Login, Register, ForgotPassword, ResetPassword, Dashboard, Documents, DocumentDetail, Profile, Search, Chat, Admin
 │   │   ├── layouts/             # MainLayout
 │   │   ├── context/             # AuthContext (auth context + provider)
 │   │   ├── hooks/               # useAuth
-│   │   ├── utils/               # format, roles
+│   │   ├── utils/               # format, roles, documentMeta
 │   │   ├── types.ts             # shared API types
 │   │   ├── index.css
 │   │   ├── App.tsx              # định nghĩa routes
@@ -163,6 +169,7 @@ uvicorn app.main:app --reload
 | POST | `/api/v1/auth/register` | Đăng ký (cá nhân / tạo tổ chức → manager) | ✅ |
 | POST | `/api/v1/auth/login` | Đăng nhập, nhận token | ✅ |
 | GET | `/api/v1/auth/me` | Thông tin người dùng hiện tại | ✅ |
+| PUT | `/api/v1/auth/me` | Cập nhật hồ sơ (tên, email, mật khẩu) | ✅ |
 | POST | `/api/v1/auth/forgot-password` | Gửi yêu cầu đặt lại mật khẩu (dev mode trả link reset) | ✅ |
 | GET | `/api/v1/auth/reset-password/validate` | Kiểm tra token đặt lại mật khẩu | ✅ |
 | POST | `/api/v1/auth/reset-password` | Đặt lại mật khẩu bằng token | ✅ |
@@ -281,7 +288,7 @@ Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ th�
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | 0 | Hạ tầng: FastAPI + PostgreSQL + Alembic, `GET /` và `GET /health` | ✅ Hoàn thành |
-| 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu | ✅ Hoàn thành |
+| 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu, hồ sơ cá nhân | ✅ Hoàn thành |
 | 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ✅ Hoàn thành |
 | 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant-Doanh nghiệp /chroma | ⏳ Chưa bắt đầu |
 | 4 | Search + Chat (RAG) | ⏳ Chưa bắt đầu |

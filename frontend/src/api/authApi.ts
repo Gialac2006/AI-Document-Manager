@@ -13,6 +13,12 @@ export interface RegisterPayload {
   organization_name?: string;
 }
 
+export interface UpdateProfilePayload {
+  full_name?: string;
+  email?: string;
+  password?: string;
+}
+
 interface AuthResponse {
   user: User;
   token: { access_token: string };
@@ -40,6 +46,10 @@ export const authApi = {
 
   me(): Promise<User> {
     return request<User>("/auth/me");
+  },
+
+  updateMe(data: UpdateProfilePayload): Promise<User> {
+    return request<User>("/auth/me", { method: "PUT", body: data });
   },
 
   forgotPassword(email: string): Promise<ForgotPasswordResponse> {

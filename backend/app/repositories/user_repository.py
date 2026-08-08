@@ -41,3 +41,23 @@ def list_users(
     if organization_id is not None:
         query = query.where(User.organization_id == organization_id)
     return list(db.scalars(query).all())
+
+
+def update(
+    db: Session,
+    user: User,
+    *,
+    full_name: str | None = None,
+    email: str | None = None,
+    hashed_password: str | None = None,
+) -> User:
+    if full_name is not None:
+        user.full_name = full_name
+    if email is not None:
+        user.email = email
+    if hashed_password is not None:
+        user.hashed_password = hashed_password
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

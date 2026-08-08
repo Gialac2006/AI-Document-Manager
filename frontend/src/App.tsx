@@ -9,6 +9,7 @@ import DocumentDetailPage from "./pages/DocumentDetailPage.tsx";
 import DocumentsPage from "./pages/DocumentsPage.tsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
+import ProfilePage from "./pages/ProfilePage.tsx";
 import RegisterPage from "./pages/RegisterPage.tsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
 import SearchPage from "./pages/SearchPage.tsx";
@@ -30,6 +31,7 @@ function App() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/:id" element={<DocumentDetailPage />} />
         <Route path="/search" element={<SearchPage />} />

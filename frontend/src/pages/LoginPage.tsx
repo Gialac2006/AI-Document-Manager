@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import AuthIntro from "../components/ui/AuthIntro.tsx";
 import Button from "../components/ui/Button.tsx";
+import PasswordInput from "../components/ui/PasswordInput.tsx";
 import { useAuth } from "../hooks/useAuth";
 import { homeForRole } from "../utils/roles";
 
@@ -60,9 +61,8 @@ export default function LoginPage() {
             </div>
             <div className="form-group">
               <label htmlFor="password">Mật khẩu</label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -22,3 +22,9 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=6, max_length=128)
     role: str = Field(default=UserRole.STAFF)
     organization_id: int | None = None
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=6, max_length=128)

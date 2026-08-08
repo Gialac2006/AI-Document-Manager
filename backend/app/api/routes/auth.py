@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.exceptions import DuplicateError
+from app.core.security import hash_password
 from app.database.connection import get_db
 from app.models.user import User
 from app.repositories import user_repository
@@ -13,7 +15,7 @@ from app.schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
 )
-from app.schemas.user import UserRead
+from app.schemas.user import UserRead, UserUpdate
 from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -35,6 +37,26 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserRead)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.put("/me", response_model=UserRead)
+def update_me(
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if data.email and data.email.lower() != current_user.email.lower():
+        if user_repository.get_by_email(db, data.email):
+            raise DuplicateError("Email đã được sử dụng")
+
+    user = user_repository.update(
+        db,
+        current_user,
+        full_name=data.full_name,
+        email=data.email.lower() if data.email else None,
+        hashed_password=hash_password(data.password) if data.password else None,
+    )
+    return user
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)

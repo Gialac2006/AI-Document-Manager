@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import Button from "../components/ui/Button.tsx";
 import { useAuth } from "../hooks/useAuth";
 import { ROLE_LABELS } from "../utils/roles";
+import { formatDate } from "../utils/format";
 
 interface NavItem {
   to: string;
@@ -58,10 +58,23 @@ export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("sidebar_collapsed") === "1"
   );
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem("sidebar_collapsed", collapsed ? "1" : "0");
   }, [collapsed]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const showAdmin = user?.role === "super_admin" || user?.role === "manager";
 
@@ -75,8 +88,19 @@ export default function MainLayout() {
   const pageTitle = PAGE_TITLES[location.pathname] || "AI Document Manager";
 
   const handleLogout = () => {
+    setMenuOpen(false);
     logout();
     navigate("/login", { replace: true });
+  };
+
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+  };
+
+  const goToProfile = () => {
+    setMenuOpen(false);
+    navigate("/profile");
   };
 
   return (
@@ -126,18 +150,87 @@ export default function MainLayout() {
             <h1>{pageTitle}</h1>
           </div>
           <div className="topbar-actions">
-            <div className="user-menu">
-              <div className="avatar">{initials(user?.full_name)}</div>
-              <div className="user-menu-info">
-                <div className="user-name">{user?.full_name}</div>
-                <div className="user-role">
-                  {user ? ROLE_LABELS[user.role] || user.role : ""}
+            <form className="topbar-search" onSubmit={handleSearch}>
+              <span className="topbar-search-icon">🔍</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm tài liệu..."
+                aria-label="Tìm kiếm tài liệu"
+              />
+            </form>
+
+            <div className="dropdown" ref={menuRef}>
+              <button
+                type="button"
+                className="dropdown-trigger"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+              >
+                <div className="avatar">{initials(user?.full_name)}</div>
+                <div className="user-menu-info">
+                  <div className="user-name">{user?.full_name}</div>
+                  <div className="user-role">
+                    {user ? ROLE_LABELS[user.role] || user.role : ""}
+                  </div>
                 </div>
-              </div>
+              </button>
+
+              {menuOpen && (
+                <div className="dropdown-menu" role="menu">
+                  <div className="dropdown-header">
+                    <span className="dropdown-header-info">Thông tin người dùng</span>
+                    <Link
+                      to="/profile"
+                      className="dropdown-profile-link"
+                      onClick={() => setMenuOpen(false)}
+                      title="Hồ sơ"
+                    >
+                      <span className="dropdown-avatar">
+                        {initials(user?.full_name)}
+                      </span>
+                      <span className="dropdown-identity">
+                        <span className="dropdown-name">{user?.full_name}</span>
+                        <span className="dropdown-email">{user?.email}</span>
+                      </span>
+                    </Link>
+                  </div>
+
+                  <div className="dropdown-info">
+                    <div className="dropdown-info-row">
+                      <span className="dropdown-info-label">Vai trò</span>
+                      <span className={`role-badge role-${user?.role}`}>
+                        {user ? ROLE_LABELS[user.role] || user.role : ""}
+                      </span>
+                    </div>
+                    <div className="dropdown-info-row">
+                      <span className="dropdown-info-label">Tham gia</span>
+                      <span className="dropdown-info-value">
+                        {formatDate(user?.created_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="dropdown-item profile-item"
+                    onClick={goToProfile}
+                    role="menuitem"
+                  >
+                    👤 Thông tin người dùng
+                  </button>
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={handleLogout}
+                    role="menuitem"
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
             </div>
-            <Button type="button" variant="text" onClick={handleLogout}>
-              Đăng xuất
-            </Button>
           </div>
         </header>
 

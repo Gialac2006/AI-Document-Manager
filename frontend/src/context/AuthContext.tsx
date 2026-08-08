@@ -38,14 +38,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return newUser;
   }, []);
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
   const logout = useCallback(() => {
     authApi.logout();
     setUser(null);
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout]
+    () => ({ user, loading, login, register, updateUser, logout }),
+    [user, loading, login, register, updateUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

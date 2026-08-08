@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import AuthIntro from "../components/ui/AuthIntro.tsx";
 import Button from "../components/ui/Button.tsx";
+import PasswordInput from "../components/ui/PasswordInput.tsx";
 import { useAuth } from "../hooks/useAuth";
 
 export default function RegisterPage() {
@@ -90,9 +91,8 @@ export default function RegisterPage() {
               </div>
               <div className="form-group">
                 <label htmlFor="password">Mật khẩu (tối thiểu 6 ký tự)</label>
-                <input
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
                   minLength={6}
                   value={password}
