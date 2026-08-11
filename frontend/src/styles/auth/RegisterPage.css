@@ -1,0 +1,547 @@
+.register-page .register-card {
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  min-height: 700px;
+  display: grid;
+  grid-template-columns: minmax(400px, 0.9fr) minmax(0, 1.1fr);
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 32px;
+  box-shadow: 0 28px 80px rgba(44, 105, 120, 0.24);
+}
+
+/* Phần form bên trái */
+
+.register-page .register-form-panel {
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.register-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.register-brand-mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #39c3ca, #087f88);
+  box-shadow: 0 9px 20px rgba(8, 127, 136, 0.25);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.register-brand-name {
+  display: flex;
+  flex-direction: column;
+  color: #183b44;
+  line-height: 1.1;
+}
+
+.register-brand-name strong {
+  font-size: 16px;
+}
+
+.register-brand-name small {
+  margin-top: 4px;
+  color: #6e8e95;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.register-user-icon {
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e8fbfc, #c5eff2);
+  color: #148b94;
+  box-shadow: 0 12px 30px rgba(20, 139, 148, 0.16);
+}
+
+.register-user-icon svg {
+  width: 36px;
+  height: 36px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.register-heading {
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.register-heading h1 {
+  margin: 0;
+  color: #183b44;
+  font-size: 29px;
+  font-weight: 800;
+}
+
+.register-heading p {
+  margin: 7px 0 0;
+  color: #78939a;
+  font-size: 13px;
+}
+
+.register-page .form-group {
+  margin-bottom: 15px;
+}
+
+.register-page .form-group label,
+.register-page .register-org-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: #244951;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.register-page .form-group input:not([type="checkbox"]),
+.register-page .register-org-field input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid #d7e7e9;
+  border-radius: 12px;
+  outline: none;
+  background: #f8fcfc;
+  color: #183b44;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.register-page .form-group input:not([type="checkbox"]):focus,
+.register-page .register-org-field input:focus {
+  border-color: #33aeb6;
+  box-shadow: 0 0 0 4px rgba(51, 174, 182, 0.13);
+}
+
+.register-page .password-field input {
+  padding-right: 48px;
+}
+
+.register-page .password-toggle {
+  color: #6a969c;
+}
+
+/* Lựa chọn đăng ký tổ chức */
+
+.register-org-section {
+  margin: 3px 0 19px;
+}
+
+.register-org-checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 54px;
+  padding: 10px 13px;
+  border: 1px solid #d7e7e9;
+  border-radius: 12px;
+  background: #f8fcfc;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.register-org-checkbox:hover {
+  border-color: #9dd5d9;
+  background: #f1fbfb;
+}
+
+.register-org-checkbox input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.register-checkbox-mark {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #a8c9cd;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #ffffff;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.register-checkbox-mark svg {
+  width: 12px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+}
+
+.register-org-checkbox input:checked + .register-checkbox-mark {
+  border-color: #148b94;
+  background: #148b94;
+}
+
+.register-org-checkbox input:checked + .register-checkbox-mark svg {
+  opacity: 1;
+}
+
+.register-org-checkbox input:focus-visible + .register-checkbox-mark {
+  box-shadow: 0 0 0 4px rgba(51, 174, 182, 0.16);
+}
+
+.register-org-checkbox > span:last-child {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.register-org-checkbox strong {
+  color: #244951;
+  font-size: 13px;
+}
+
+.register-org-checkbox small {
+  margin-top: 3px;
+  color: #78939a;
+  font-size: 11px;
+}
+
+.register-org-field {
+  margin-top: 14px;
+  animation: register-field-in 0.2s ease-out;
+}
+
+.register-page .register-submit {
+  height: 50px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #24a9b2, #087f88);
+  box-shadow: 0 12px 24px rgba(8, 127, 136, 0.24);
+  font-size: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.register-page .register-submit:hover:not(:disabled) {
+  background: linear-gradient(90deg, #179ba4, #076e76);
+  box-shadow: 0 15px 28px rgba(8, 127, 136, 0.3);
+  transform: translateY(-1px);
+}
+
+.register-page .switch-page {
+  margin-top: 19px;
+  color: #78939a;
+  font-size: 13px;
+}
+
+.register-page .switch-page a {
+  color: #128690;
+  font-weight: 700;
+}
+
+/* Trạng thái đăng ký thành công */
+
+.register-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.register-success-icon {
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16804a;
+  box-shadow: 0 14px 32px rgba(22, 128, 74, 0.15);
+}
+
+.register-success-icon svg {
+  width: 43px;
+  height: 43px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.register-success h1 {
+  margin: 0;
+  color: #183b44;
+  font-size: 29px;
+}
+
+.register-success p {
+  max-width: 330px;
+  margin: 12px 0 28px;
+  color: #78939a;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* Phần giới thiệu bên phải */
+
+.register-welcome {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 66px 60px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(145deg, #4fc2ca 0%, #178e98 55%, #08717b 100%);
+  color: #ffffff;
+}
+
+.register-welcome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://raw.githubusercontent.com/claudz1/CodepenImages/master/bg-clouds.png");
+  background-repeat: repeat-x;
+  background-position: 0 18px;
+  background-size: auto 190px;
+  opacity: 0.7;
+  animation: register-panel-clouds 100s linear infinite;
+  pointer-events: none;
+}
+
+.register-welcome::after {
+  content: "";
+  position: absolute;
+  right: -18%;
+  bottom: -165px;
+  width: 140%;
+  height: 360px;
+  border-radius: 50% 50% 0 0;
+  background: rgba(230, 252, 253, 0.18);
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+.register-welcome-content {
+  position: relative;
+  z-index: 2;
+  max-width: 455px;
+}
+
+.register-welcome-label {
+  display: inline-block;
+  margin-bottom: 17px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  opacity: 0.82;
+}
+
+.register-welcome h2 {
+  margin: 0 0 18px;
+  max-width: 480px;
+  font-size: clamp(35px, 4.5vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.register-welcome p {
+  max-width: 430px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.register-feature-list {
+  position: relative;
+  z-index: 2;
+  width: min(390px, 100%);
+  margin-top: auto;
+  padding-top: 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.register-feature-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 34px rgba(4, 78, 86, 0.14);
+  backdrop-filter: blur(9px);
+}
+
+.register-feature-card > span {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #087f88;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.register-feature-card div {
+  display: flex;
+  flex-direction: column;
+}
+
+.register-feature-card strong {
+  font-size: 14px;
+}
+
+.register-feature-card small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 11px;
+}
+
+.register-feature-card.feature-two {
+  transform: translateX(30px);
+}
+
+.register-feature-card.feature-three {
+  transform: translateX(60px);
+}
+
+.register-login-link {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+  margin-top: 28px;
+  padding: 11px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.register-login-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .register-page .register-card {
+    max-width: 560px;
+    grid-template-columns: 1fr;
+  }
+
+  .register-page .register-form-panel {
+    padding: 44px 50px;
+  }
+
+  .register-welcome {
+    min-height: 470px;
+    padding: 45px 50px;
+  }
+
+  .register-welcome h2 {
+    font-size: 38px;
+  }
+
+  .register-feature-list {
+    margin-top: 25px;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .register-page {
+    padding: 18px;
+  }
+
+  .register-page .register-card {
+    border-radius: 24px;
+  }
+
+  .register-page .register-form-panel {
+    padding: 34px 25px;
+  }
+
+  .register-brand {
+    margin-bottom: 25px;
+  }
+
+  .register-welcome {
+    min-height: 300px;
+    padding: 35px 27px;
+  }
+
+  .register-welcome h2 {
+    font-size: 31px;
+  }
+
+  .register-welcome p {
+    font-size: 13px;
+  }
+
+  .register-feature-list {
+    display: none;
+  }
+}
+
+@keyframes register-panel-clouds {
+  from {
+    background-position: 0 18px;
+  }
+
+  to {
+    background-position: 100% 18px;
+  }
+}
+
+@keyframes register-field-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-welcome::before,
+  .register-org-field {
+    animation: none;
+  }
+}

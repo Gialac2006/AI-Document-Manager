@@ -1,0 +1,432 @@
+.login-page .login-card {
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  min-height: 640px;
+  display: grid;
+  grid-template-columns: minmax(380px, 0.85fr) minmax(0, 1.15fr);
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 32px;
+  box-shadow: 0 28px 80px rgba(44, 105, 120, 0.24);
+}
+
+/* Phần form bên trái */
+
+.login-page .login-form-panel {
+  padding: 48px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 34px;
+}
+
+.login-brand-mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #39c3ca, #087f88);
+  box-shadow: 0 9px 20px rgba(8, 127, 136, 0.25);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.login-brand-name {
+  display: flex;
+  flex-direction: column;
+  color: #183b44;
+  line-height: 1.1;
+}
+
+.login-brand-name strong {
+  font-size: 16px;
+}
+
+.login-brand-name small {
+  margin-top: 4px;
+  color: #6e8e95;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-user-icon {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e8fbfc, #c5eff2);
+  color: #148b94;
+  box-shadow: 0 12px 30px rgba(20, 139, 148, 0.16);
+}
+
+.login-user-icon svg {
+  width: 39px;
+  height: 39px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.login-heading {
+  margin-bottom: 27px;
+  text-align: center;
+}
+
+.login-heading h1 {
+  margin: 0;
+  color: #183b44;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.login-heading p {
+  margin: 8px 0 0;
+  color: #78939a;
+  font-size: 14px;
+}
+
+.login-page .form-group {
+  margin-bottom: 19px;
+}
+
+.login-page .form-group label {
+  margin-bottom: 8px;
+  color: #244951;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login-page .form-group input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border: 1px solid #d7e7e9;
+  border-radius: 12px;
+  outline: none;
+  background: #f8fcfc;
+  color: #183b44;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-page .form-group input:focus {
+  border-color: #33aeb6;
+  box-shadow: 0 0 0 4px rgba(51, 174, 182, 0.13);
+}
+
+.login-page .password-field input {
+  padding-right: 48px;
+}
+
+.login-page .password-toggle {
+  color: #6a969c;
+}
+
+.login-page .form-options {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 21px;
+}
+
+.login-page .login-forgot {
+  padding: 3px 0;
+  color: #178e97;
+  font-size: 13px;
+}
+
+.login-page .login-forgot:hover {
+  background: transparent;
+  color: #0a6e76;
+  text-decoration: underline;
+}
+
+.login-page .login-submit {
+  height: 50px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #24a9b2, #087f88);
+  box-shadow: 0 12px 24px rgba(8, 127, 136, 0.24);
+  font-size: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-page .login-submit:hover:not(:disabled) {
+  background: linear-gradient(90deg, #179ba4, #076e76);
+  box-shadow: 0 15px 28px rgba(8, 127, 136, 0.3);
+  transform: translateY(-1px);
+}
+
+.login-page .switch-page {
+  margin-top: 22px;
+  color: #78939a;
+  font-size: 13px;
+}
+
+.login-page .switch-page a {
+  color: #128690;
+  font-weight: 700;
+}
+
+/* Phần chào mừng bên phải */
+
+.login-welcome {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 70px 62px;
+  display: flex;
+  align-items: flex-start;
+  background: linear-gradient(145deg, #4fc2ca 0%, #178e98 55%, #08717b 100%);
+  color: #ffffff;
+}
+
+.login-welcome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://raw.githubusercontent.com/claudz1/CodepenImages/master/bg-clouds.png");
+  background-repeat: repeat-x;
+  background-position: 0 20px;
+  background-size: auto 190px;
+  opacity: 0.7;
+  animation: login-panel-clouds 100s linear infinite;
+  pointer-events: none;
+}
+
+.login-welcome::after {
+  content: "";
+  position: absolute;
+  right: -15%;
+  bottom: -150px;
+  width: 135%;
+  height: 330px;
+  border-radius: 50% 50% 0 0;
+  background: rgba(230, 252, 253, 0.18);
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+.login-welcome-content {
+  position: relative;
+  z-index: 2;
+  max-width: 440px;
+}
+
+.login-welcome-label {
+  display: inline-block;
+  margin-bottom: 17px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  opacity: 0.82;
+}
+
+.login-welcome h2 {
+  margin: 0 0 18px;
+  max-width: 420px;
+  font-size: clamp(36px, 5vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.login-welcome p {
+  max-width: 410px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.login-register-link {
+  display: inline-flex;
+  margin-top: 26px;
+  padding: 11px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.login-register-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+/* Thẻ tài liệu trang trí */
+
+.login-document-preview {
+  position: absolute;
+  right: 52px;
+  bottom: 48px;
+  z-index: 2;
+  width: 235px;
+  padding: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 22px 50px rgba(4, 78, 86, 0.24);
+  backdrop-filter: blur(10px);
+  transform: rotate(-4deg);
+}
+
+.login-document-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 21px;
+}
+
+.login-document-header span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #d8f4f5;
+  color: #087f88;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.login-document-header i {
+  width: 40px;
+  height: 8px;
+  border-radius: 99px;
+  background: #d9e9eb;
+}
+
+.login-document-line {
+  height: 8px;
+  margin-bottom: 10px;
+  border-radius: 99px;
+  background: #d9e9eb;
+}
+
+.login-document-line.line-long {
+  width: 100%;
+}
+
+.login-document-line.line-medium {
+  width: 78%;
+}
+
+.login-document-line.line-short {
+  width: 54%;
+}
+
+.login-document-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  color: #47747a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.login-document-status span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d9f6e5;
+  color: #18804b;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .login-page .login-card {
+    max-width: 560px;
+    grid-template-columns: 1fr;
+  }
+
+  .login-page .login-form-panel {
+    padding: 44px 50px;
+  }
+
+  .login-welcome {
+    min-height: 310px;
+    padding: 45px 50px;
+  }
+
+  .login-welcome h2 {
+    font-size: 38px;
+  }
+
+  .login-document-preview {
+    right: 35px;
+    bottom: 32px;
+    width: 190px;
+  }
+}
+
+@media (max-width: 560px) {
+  .login-page {
+    padding: 18px;
+  }
+
+  .login-page .login-card {
+    border-radius: 24px;
+  }
+
+  .login-page .login-form-panel {
+    padding: 34px 25px;
+  }
+
+  .login-brand {
+    margin-bottom: 28px;
+  }
+
+  .login-welcome {
+    min-height: 245px;
+    padding: 35px 27px;
+  }
+
+  .login-welcome h2 {
+    font-size: 32px;
+  }
+
+  .login-welcome p {
+    font-size: 13px;
+  }
+
+  .login-document-preview {
+    display: none;
+  }
+}
+
+@keyframes login-panel-clouds {
+  from {
+    background-position: 0 20px;
+  }
+
+  to {
+    background-position: 100% 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-welcome::before {
+    animation: none;
+  }
+}
