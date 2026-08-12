@@ -5,6 +5,7 @@ from app.models.document import Document
 from app.models.user import User
 from app.repositories import document_repository, folder_repository
 from app.services import storage_service
+from app.services.extraction_service import TextExtractionError, extract_text
 from app.services.scope_service import Scope, check_folder_scope
 from app.utils.file_utils import get_file_extension, is_allowed_extension
 
@@ -55,7 +56,40 @@ def create_document(
         file_name=document.file_name,
         created_by=current_user.id,
     )
+
+    # Đánh dấu tài liệu đang được xử lý
+    document = document_repository.update_processing(
+        db,
+        document,
+        status="processing",
+    )
+
+    try:
+        # Chuyển đường dẫn tương đối thành đường dẫn thật trong File Storage
+        full_path = storage_service.get_full_path(file_path)
+
+        # Đọc nội dung văn bản từ PDF
+        extracted_text = extract_text(full_path)
+
+        # Lưu văn bản vào PostgreSQL
+        document = document_repository.update_processing(
+            db,
+            document,
+            status="text_extracted",
+            extracted_text=extracted_text,
+        )
+
+    except TextExtractionError as error:
+        # File vẫn được upload nhưng đánh dấu quá trình đọc nội dung thất bại
+        document = document_repository.update_processing(
+            db,
+            document,
+            status="failed",
+            processing_error=str(error),
+        )
+
     return document
+
 
 
 def get_document(db, *, document_id: int, current_user: User) -> Document:

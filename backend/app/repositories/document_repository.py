@@ -107,3 +107,35 @@ def create_version(
     db.commit()
     db.refresh(record)
     return record
+
+def update_processing(
+    db: Session,
+    document: Document,
+    *,
+    status: str,
+    extracted_text: str | None = None,
+    processing_error: str | None = None,
+) -> Document:
+    """
+    Cập nhật trạng thái và kết quả xử lý của một tài liệu.
+
+    Hàm này được sử dụng khi tài liệu bắt đầu xử lý,
+    khi trích xuất thành công hoặc khi xảy ra lỗi.
+    """
+
+    # QUAN TRỌNG: Trạng thái hiện tại của quá trình xử lý
+    document.status = status
+
+    # QUAN TRỌNG: Toàn bộ văn bản lấy được từ PDF hoặc OCR
+    document.extracted_text = extracted_text
+
+    # Nếu thành công thì giá trị này là None; nếu thất bại thì chứa lý do
+    document.processing_error = processing_error
+
+    # QUAN TRỌNG: Ghi các thay đổi thật sự xuống PostgreSQL
+    db.commit()
+
+    # Đọc lại dữ liệu mới nhất từ PostgreSQL vào đối tượng document
+    db.refresh(document)
+
+    return document
