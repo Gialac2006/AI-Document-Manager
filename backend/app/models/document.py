@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -26,7 +26,13 @@ class Document(Base):
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default="uploaded"
     )
+
+    extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Lưu lý do xử lý thất bại để Backend và Frontend có thể hiển thị lỗi
+    processing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
     current_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
