@@ -3,9 +3,11 @@ import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { authApi } from "../api/authApi";
-import AuthIntro from "../components/ui/AuthIntro.tsx";
 import Button from "../components/ui/Button.tsx";
 import type { ForgotPasswordResponse } from "../types";
+
+import "../styles/auth/AuthBackground.css";
+import "../styles/auth/LoginPage.css";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -29,21 +31,39 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-container">
-        <AuthIntro
-          title="Khôi phục mật khẩu"
-          description="Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu."
-        />
+    <div className="auth-page login-page">
+      <div className="auth-container login-card">
+        <section className="auth-form login-form-panel">
+          <div className="login-brand">
+            <span className="login-brand-mark">AI</span>
 
-        <div className="auth-form">
-          <h2>Quên mật khẩu</h2>
-          <p className="auth-description">Nhập email đã đăng ký tài khoản</p>
+            <span className="login-brand-name">
+              <strong>AI Document</strong>
+              <small>Manager</small>
+            </span>
+          </div>
 
-          {error && <div className="error-message">{error}</div>}
+          <div className="login-user-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <rect x="4" y="11" width="16" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              <circle cx="12" cy="16" r="1.4" />
+            </svg>
+          </div>
+
+          <div className="login-heading">
+            <h1>Quên mật khẩu</h1>
+            <p>Nhập email đã đăng ký, chúng tôi sẽ gửi link đặt lại mật khẩu</p>
+          </div>
+
+          {error && (
+            <div className="error-message" role="alert">
+              {error}
+            </div>
+          )}
 
           {result ? (
-            <div>
+            <>
               <div className="alert alert-success">{result.detail}</div>
               {result.reset_url && (
                 <div className="form-group reset-box">
@@ -57,7 +77,7 @@ export default function ForgotPasswordPage() {
               <p className="switch-page">
                 Nhớ mật khẩu? <Link to="/login">Đăng nhập</Link>
               </p>
-            </div>
+            </>
           ) : (
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -66,13 +86,18 @@ export default function ForgotPasswordPage() {
                   id="email"
                   type="email"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                 />
               </div>
 
-              <Button type="submit" disabled={submitting}>
+              <Button
+                type="submit"
+                className="login-submit"
+                disabled={submitting}
+              >
                 {submitting ? "Đang xử lý..." : "Gửi link đặt lại"}
               </Button>
             </form>
@@ -81,7 +106,40 @@ export default function ForgotPasswordPage() {
           <p className="switch-page">
             <Link to="/login">Quay lại đăng nhập</Link>
           </p>
-        </div>
+        </section>
+
+        <aside className="login-welcome">
+          <div className="login-welcome-content">
+            <span className="login-welcome-label">AI DOCUMENT MANAGER</span>
+
+            <h2>Khôi phục quyền truy cập của bạn</h2>
+
+            <p>
+              Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu an toàn.
+              Bạn sẽ quay lại quản lý tài liệu của mình ngay sau đó.
+            </p>
+
+            <Link to="/login" className="login-register-link">
+              Quay lại đăng nhập
+            </Link>
+          </div>
+
+          <div className="login-document-preview" aria-hidden="true">
+            <div className="login-document-header">
+              <span>AI</span>
+              <i></i>
+            </div>
+
+            <div className="login-document-line line-long"></div>
+            <div className="login-document-line line-medium"></div>
+            <div className="login-document-line line-short"></div>
+
+            <div className="login-document-status">
+              <span>✓</span>
+              Mật khẩu an toàn
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
