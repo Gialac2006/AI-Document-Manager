@@ -8,6 +8,7 @@ import UploadDocument from "../components/UploadDocument.tsx";
 import Spinner from "../components/ui/Spinner.tsx";
 import type { Document, Folder } from "../types";
 
+// Trang quản lý tài liệu: duyệt thư mục, tải lên, tìm kiếm và xoá tài liệu
 export default function DocumentsPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -33,10 +34,24 @@ export default function DocumentsPage() {
     }
   }, []);
 
+  // Tự làm mới danh sách khi quay lại tab/đổi folder và mỗi 10 giây
   useEffect(() => {
     loadData(selectedFolder);
   }, [selectedFolder, loadData]);
 
+  useEffect(() => {
+    const onFocus = () => loadData(selectedFolder);
+    window.addEventListener("focus", onFocus);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") loadData(selectedFolder);
+    }, 10000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(timer);
+    };
+  }, [selectedFolder, loadData]);
+
+  // Xoá tài liệu sau khi xác nhận và cập nhật lại danh sách
   const handleDelete = async (id: number) => {
     if (!window.confirm("Xoá tài liệu này?")) return;
     try {
@@ -47,6 +62,7 @@ export default function DocumentsPage() {
     }
   };
 
+  // Làm mới danh sách thư mục sau khi có thay đổi (thêm/xoá thư mục)
   const handleFolderChanged = async () => {
     try {
       const folderList = await folderApi.list();

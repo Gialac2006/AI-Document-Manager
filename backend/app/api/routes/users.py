@@ -12,6 +12,7 @@ from app.schemas.user import UserCreate, UserRead
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+# Lấy danh sách người dùng: admin xem tất cả, manager chỉ xem trong tổ chức
 @router.get("", response_model=list[UserRead])
 def list_users(
     db: Session = Depends(get_db),
@@ -26,6 +27,20 @@ def list_users(
     return users
 
 
+# Tìm người dùng theo email để chia sẻ tài liệu
+@router.get("/lookup", response_model=UserRead)
+def lookup_user(
+    email: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user = user_repository.get_by_email(db, email.strip())
+    if not user:
+        raise NotFoundError("Không tìm thấy người dùng với email này")
+    return user
+
+
+# Tạo người dùng mới, gán vai trò theo quyền của người tạo
 @router.post("", response_model=UserRead, status_code=201)
 def create_user(
     data: UserCreate,
@@ -55,6 +70,7 @@ def create_user(
     return user
 
 
+# Xoá người dùng, chỉ được xoá nhân viên trong tổ chức của mình
 @router.delete("/{user_id}", status_code=204)
 def delete_user(
     user_id: int,

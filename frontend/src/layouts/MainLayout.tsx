@@ -40,8 +40,13 @@ const PAGE_TITLES: Record<string, string> = {
   "/search": "Tìm kiếm ngữ nghĩa",
   "/chat": "Chat với tài liệu",
   "/admin": "Quản trị hệ thống",
+  "/admin/dashboard": "Dashboard",
+  "/admin/users": "Quản lý người dùng",
+  "/admin/tenants": "Quản lý tổ chức",
+  "/admin/audit-logs": "Nhật ký hoạt động",
 };
 
+// Lấy chữ cái đầu của họ tên để hiển thị avatar
 function initials(name?: string) {
   if (!name) return "?";
   return name
@@ -51,6 +56,7 @@ function initials(name?: string) {
     .join("");
 }
 
+// Layout chính sau khi đăng nhập: sidebar, topbar với menu người dùng và vùng nội dung
 export default function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -87,12 +93,14 @@ export default function MainLayout() {
 
   const pageTitle = PAGE_TITLES[location.pathname] || "AI Document Manager";
 
+  // Xử lý đăng xuất: đóng menu rồi chuyển về trang đăng nhập
   const handleLogout = () => {
     setMenuOpen(false);
     logout();
     navigate("/login", { replace: true });
   };
 
+  // Xử lý tìm kiếm ở topbar: chuyển sang trang tìm kiếm với từ khoá
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     navigate(`/search?q=${encodeURIComponent(query.trim())}`);

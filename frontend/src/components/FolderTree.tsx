@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 
@@ -15,6 +15,7 @@ interface FolderNode {
   children: FolderNode[];
 }
 
+// Xây dựng cây thư mục từ danh sách phẳng
 function buildTree(folders: Folder[]): FolderNode[] {
   const nodes = new Map<number, FolderNode>(
     folders.map((f) => [f.id, { ...f, children: [] }])
@@ -30,6 +31,7 @@ function buildTree(folders: Folder[]): FolderNode[] {
   return roots;
 }
 
+// Trả về biểu tượng tương ứng với loại file
 function fileIcon(fileType: string | null): string {
   if (fileType === ".pdf") return "📕";
   if (fileType === ".txt" || fileType === ".md") return "📝";
@@ -42,6 +44,8 @@ function fileIcon(fileType: string | null): string {
 interface FolderNodeProps {
   folder: FolderNode;
   depth: number;
+  expandedIds: Set<number>;
+  onToggleExpand: (id: number) => void;
   selectedId: number | null;
   onSelect: (id: number | null) => void;
   onRename: (id: number, name: string) => void;
@@ -51,9 +55,12 @@ interface FolderNodeProps {
   onToggleFiles: (id: number) => void;
 }
 
+// Component đệ quy hiển thị 1 thư mục (kèm thư mục con)
 function FolderNode({
   folder,
   depth,
+  expandedIds,
+  onToggleExpand,
   selectedId,
   onSelect,
   onRename,
@@ -64,7 +71,10 @@ function FolderNode({
 }: FolderNodeProps) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
+  const hasChildren = folder.children.length > 0;
+  const expanded = expandedIds.has(folder.id);
 
+  // Lưu tên thư mục đã sửa
   const handleRename = async () => {
     const trimmed = name.trim();
     if (!trimmed || trimmed === folder.name) {
@@ -83,6 +93,17 @@ function FolderNode({
         style={{ paddingLeft: `${depth * 18 + 10}px` }}
         onClick={() => onSelect(folder.id)}
       >
+        <span
+          className={`folder-tree-caret${hasChildren ? "" : " placeholder"}`}
+          role="button"
+          aria-expanded={expanded}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasChildren) onToggleExpand(folder.id);
+          }}
+        >
+          {hasChildren ? (expanded ? "▾" : "▸") : ""}
+        </span>
         <span className="folder-tree-icon">📁</span>
         {editing ? (
           <input
@@ -131,20 +152,23 @@ function FolderNode({
           </span>
         )}
       </div>
-      {folder.children.map((child) => (
-        <FolderNode
-          key={child.id}
-          folder={child}
-          depth={depth + 1}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          onRename={onRename}
-          onDelete={onDelete}
-          canWrite={canWrite}
-          pinnedId={pinnedId}
-          onToggleFiles={onToggleFiles}
-        />
-      ))}
+      {expanded &&
+        folder.children.map((child) => (
+          <FolderNode
+            key={child.id}
+            folder={child}
+            depth={depth + 1}
+            expandedIds={expandedIds}
+            onToggleExpand={onToggleExpand}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            onRename={onRename}
+            onDelete={onDelete}
+            canWrite={canWrite}
+            pinnedId={pinnedId}
+            onToggleFiles={onToggleFiles}
+          />
+        ))}
     </div>
   );
 }
@@ -156,6 +180,7 @@ interface FolderTreeProps {
   onChanged: () => void;
 }
 
+// Component cây thư mục với các thao tác tạo, đổi tên, xoá, xem file
 export default function FolderTree({ folders, selectedId, onSelect, onChanged }: FolderTreeProps) {
   const { user } = useAuth();
   const [creating, setCreating] = useState(false);
@@ -165,6 +190,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
   const [pinnedDocs, setPinnedDocs] = useState<Document[] | null>(null);
   const [pinnedLoading, setPinnedLoading] = useState(false);
   const [pinnedError, setPinnedError] = useState("");
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   const canWrite = user?.role === "manager" || user?.role === "individual" || user?.role === "super_admin";
 
@@ -180,12 +206,14 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
     setError("");
   };
 
+  // Tạo thư mục mới trong thư mục đang chọn
   const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const name = newName.trim();
     if (!name) return;
     try {
       await folderApi.create({ name, parent_id: selectedId || null });
+      if (selectedId != null) expandPath(selectedId);
       setNewName("");
       setError("");
       setCreating(false);
@@ -195,6 +223,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
     }
   };
 
+  // Đổi tên thư mục
   const handleRename = async (id: number, name: string) => {
     try {
       await folderApi.rename(id, name);
@@ -205,6 +234,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
     }
   };
 
+  // Xoá thư mục sau khi xác nhận
   const handleDelete = async (id: number) => {
     if (!window.confirm("Xoá thư mục này và toàn bộ thư mục con?")) return;
     try {
@@ -223,6 +253,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
     setPinnedError("");
   };
 
+  // Bật/tắt bảng danh sách file của thư mục được ghim
   const handleToggleFiles = async (id: number) => {
     if (pinnedId === id) {
       closeFiles();
@@ -245,6 +276,39 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
   const tree = buildTree(folders);
   const pinnedFolder = pinnedId ? folders.find((f) => f.id === pinnedId) : null;
 
+  // Mở rộng toàn bộ đường dẫn tới thư mục đã cho
+  const expandPath = (id: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      let current: Folder | undefined = folders.find((f) => f.id === id);
+      while (current && !next.has(current.id)) {
+        next.add(current.id);
+        const parentId = current.parent_id;
+        current = parentId != null
+          ? folders.find((f) => f.id === parentId)
+          : undefined;
+      }
+      return next;
+    });
+  };
+
+  const toggleExpanded = (id: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (selectedId != null) expandPath(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, folders]);
+
   return (
     <div className="folder-tree">
       <div className="folder-tree-header">
@@ -259,6 +323,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
         className={`folder-tree-row ${selectedId == null ? "active" : ""}`}
         onClick={() => onSelect(null)}
       >
+        <span className="folder-tree-caret placeholder" role="button"></span>
         <span className="folder-tree-icon">🗂️</span>
         <span className="folder-tree-name">Tất cả tài liệu</span>
       </div>
@@ -267,8 +332,12 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
           key={folder.id}
           folder={folder}
           depth={0}
+          expandedIds={expandedIds}
+          onToggleExpand={toggleExpanded}
           selectedId={selectedId}
-          onSelect={onSelect}
+          onSelect={(id) => {
+            onSelect(id);
+          }}
           onRename={handleRename}
           onDelete={handleDelete}
           canWrite={canWrite}

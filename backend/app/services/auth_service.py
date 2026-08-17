@@ -15,6 +15,7 @@ from app.repositories import (
 from app.schemas.auth import LoginRequest, RegisterRequest, Token
 
 
+# Đăng ký tài khoản cá nhân hoặc tạo tổ chức mới
 def register(db: Session, data: RegisterRequest) -> tuple[User, Token]:
     if user_repository.get_by_email(db, data.email):
         raise DuplicateError("Email đã được đăng ký")
@@ -48,6 +49,7 @@ def register(db: Session, data: RegisterRequest) -> tuple[User, Token]:
     return user, token
 
 
+# Xác thực email và mật khẩu khi đăng nhập
 def authenticate(db: Session, data: LoginRequest) -> User:
     user = user_repository.get_by_email(db, data.email)
     if not user or not verify_password(data.password, user.hashed_password):
@@ -55,10 +57,12 @@ def authenticate(db: Session, data: LoginRequest) -> User:
     return user
 
 
+# Cấp token truy cập cho người dùng
 def issue_token(user: User) -> Token:
     return _build_token(user)
 
 
+# Tạo token đặt lại mật khẩu cho email yêu cầu
 def request_password_reset(db: Session, email: str) -> dict:
     detail = "Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu"
     user = user_repository.get_by_email(db, email)
@@ -73,8 +77,10 @@ def request_password_reset(db: Session, email: str) -> dict:
         db, token=token, user_id=user.id, expires_at=expires_at
     )
 
-    if settings.email_enabled:
-        # TODO: gửi email thật qua SMTP khi có cấu hình
+    if settings.is_production:
+        if settings.email_enabled:
+            # TODO: gửi email thật qua SMTP khi có cấu hình
+            pass
         return {"detail": detail, "reset_token": None, "reset_url": None}
 
     reset_url = f"{settings.frontend_url}/reset-password?token={token}"
@@ -85,10 +91,12 @@ def request_password_reset(db: Session, email: str) -> dict:
     }
 
 
+# Kiểm tra token đặt lại mật khẩu còn hợp lệ
 def validate_reset_token(db: Session, token: str) -> bool:
     return password_reset_repository.get_valid_by_token(db, token) is not None
 
 
+# Đặt mật khẩu mới cho người dùng theo token
 def reset_password(db: Session, token: str, new_password: str) -> None:
     record = password_reset_repository.get_valid_by_token(db, token)
     if not record:
@@ -102,6 +110,7 @@ def reset_password(db: Session, token: str, new_password: str) -> None:
     password_reset_repository.mark_used(db, record)
 
 
+# Tạo token JWT kèm vai trò và tổ chức của người dùng
 def _build_token(user: User) -> Token:
     extra = {
         "role": user.role,

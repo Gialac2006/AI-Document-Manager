@@ -11,6 +11,7 @@ interface UploadDocumentProps {
   onUploaded: () => void;
 }
 
+// Component form tải tài liệu lên hệ thống
 export default function UploadDocument({ folderId, folders, onUploaded }: UploadDocumentProps) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -20,6 +21,7 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Gửi file và thông tin lên server
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!file) {
@@ -45,6 +47,7 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
     }
   };
 
+  // Lấy file khi kéo thả vào vùng tải lên
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(false);
@@ -83,6 +86,7 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
       </div>
+      <div className="upload-hint">Kích thước tối đa 100 MB</div>
       <div className="form-group">
         <label>Tiêu đề (tuỳ chọn)</label>
         <input

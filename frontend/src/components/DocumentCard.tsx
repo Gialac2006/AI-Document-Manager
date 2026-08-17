@@ -11,9 +11,11 @@ interface DocumentCardProps {
   onDelete: (id: number) => void;
 }
 
+// Component thẻ hiển thị 1 tài liệu trong danh sách
 export default function DocumentCard({ document, onDelete }: DocumentCardProps) {
   const { user } = useAuth();
-  const canDelete = user?.role !== "staff";
+  const isAdmin = user?.role === "super_admin";
+  const canDelete = isAdmin || document.access_level === "manage";
   const meta = fileTypeInfo(document.file_name, document.file_type);
   const status = statusInfo(document.status);
 
