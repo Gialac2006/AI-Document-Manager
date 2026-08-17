@@ -21,4 +21,8 @@ export const userApi = {
   remove(id: number): Promise<unknown> {
     return request(`/users/${id}`, { method: "DELETE" });
   },
+
+  lookupByEmail(email: string): Promise<User> {
+    return request<User>(`/users/lookup?email=${encodeURIComponent(email)}`);
+  },
 };

@@ -18,6 +18,7 @@ function initials(name?: string) {
     .join("");
 }
 
+// Trang hồ sơ người dùng: xem thông tin, cập nhật họ tên/email/mật khẩu
 export default function ProfilePage() {
   const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
@@ -30,11 +31,13 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Đăng xuất và chuyển về trang đăng nhập
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
   };
 
+  // Gửi form cập nhật thông tin cá nhân sau khi kiểm tra dữ liệu hợp lệ
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -123,7 +126,7 @@ export default function ProfilePage() {
             <label htmlFor="profile_password">Mật khẩu mới (bỏ trống nếu không đổi)</label>
             <PasswordInput
               id="profile_password"
-              minLength={6}
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -134,7 +137,7 @@ export default function ProfilePage() {
             <label htmlFor="profile_confirm">Xác nhận mật khẩu mới</label>
             <PasswordInput
               id="profile_confirm"
-              minLength={6}
+              minLength={8}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="••••••••"

@@ -8,12 +8,15 @@ interface DocumentPreviewProps {
   documentId: number;
   fileName: string;
   fileType: string | null;
+  version?: number;
 }
 
+// Component xem trước nội dung tài liệu (ảnh, docx, pdf...)
 export default function DocumentPreview({
   documentId,
   fileName,
   fileType,
+  version,
 }: DocumentPreviewProps) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [docxHtml, setDocxHtml] = useState<string | null>(null);
@@ -21,6 +24,7 @@ export default function DocumentPreview({
 
   const isDocx = isDocxFile(fileName, fileType);
 
+  // Tải file xem trước theo documentId/version, chuyển DOCX sang HTML
   useEffect(() => {
     let cancelled = false;
     let url: string | null = null;
@@ -29,7 +33,7 @@ export default function DocumentPreview({
     setDocxHtml(null);
 
     documentApi
-      .preview(documentId)
+      .preview(documentId, version)
       .then(async (created) => {
         if (cancelled) {
           URL.revokeObjectURL(created);
@@ -65,7 +69,7 @@ export default function DocumentPreview({
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [documentId, isDocx]);
+  }, [documentId, isDocx, version]);
 
   if (error) {
     return (
