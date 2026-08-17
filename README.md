@@ -19,9 +19,11 @@ Sản phẩm gồm: Website, REST API, Docker và tài liệu kỹ thuật.
 - Upload tài liệu (PDF, DOCX, ảnh...)
 - Quản lý thư mục theo cây phân cấp
 - Phân quyền theo vai trò (admin hệ thống, quản lý, nhân viên, cá nhân)
+- **Phê duyệt tài liệu**: nhân viên upload → "Chờ duyệt" (chưa công khai), quản lý duyệt/từ chối mới chính thức
+- **Chia sẻ tài liệu**: cấp quyền (Xem / Chỉnh sửa / Quản lý) cho người dùng cụ thể qua email
+- **Nhật ký hoạt động (audit log)** theo tài liệu và theo người dùng
 - OCR và chuyển PDF thành văn bản
 - Phiên bản tài liệu (versioning)
-- Nhật ký chỉnh sửa (audit log)
 
 ### AI tích hợp
 - Tóm tắt tài liệu
@@ -41,16 +43,17 @@ Hệ thống phân biệt **admin hệ thống** và **người dùng trong tổ
 
 | Vai trò | Thuộc tổ chức? | Quyền |
 |---|---|---|
-| **Admin hệ thống** (`super_admin`) | Không | Toàn quyền hệ thống: tạo/quản lý tổ chức, quản lý người dùng, giám sát |
-| **Quản lý** (`manager`) | Có | Quản trị nội bộ: quản lý nhân viên, tạo thư mục/tài liệu, toàn quyền tài liệu của tổ chức |
-| **Nhân viên** (`staff`) | Có | Xem + chỉnh sửa tài liệu trong tổ chức, không xoá, không quản lý người khác |
-| **Cá nhân** (`individual`) | Không | Tự dùng riêng: upload, xem, quản lý tài liệu của chính mình |
+| **Admin hệ thống** (`super_admin`) | Không | Toàn quyền hệ thống: tạo/quản lý tổ chức, quản lý người dùng, duyệt tài liệu, giám sát |
+| **Quản lý** (`manager`) | Có | Quản trị nội bộ: quản lý nhân viên, tạo thư mục/tài liệu, **duyệt tài liệu của nhân viên**, toàn quyền tài liệu của tổ chức |
+| **Nhân viên** (`staff`) | Có | Xem + chỉnh sửa tài liệu trong tổ chức, không xoá, không quản lý người khác; **tài liệu tự upload ở trạng thái "Chờ duyệt"** |
+| **Cá nhân** (`individual`) | Không | Tự dùng riêng: upload, xem, quản lý tài liệu của chính mình (không qua duyệt) |
 
 **Quy tắc phạm vi dữ liệu:**
 - Admin hệ thống quản lý toàn bộ hệ thống.
 - Quản lý & nhân viên chỉ thấy dữ liệu trong tổ chức của mình.
 - Cá nhân chỉ thấy tài liệu của chính mình.
-- Phân quyền chi tiết theo từng tài liệu sẽ được bổ sung ở giai đoạn sau.
+- **Tài liệu "Chờ duyệt"** (`pending`) chỉ hiển thị với người tạo và quản lý; sau khi duyệt (`approved`) mới công khai với toàn tổ chức và mới chia sẻ được.
+- **Chia sẻ** cấp quyền chi tiết theo từng tài liệu: `view` (xem), `edit` (sửa), `admin` (quản lý) — áp dụng cho người ngoài tổ chức hoặc cá nhân.
 
 **Luồng đăng ký:**
 - Đăng ký **Cá nhân** → tài khoản `individual`, dùng riêng tài liệu của mình.
@@ -176,6 +179,7 @@ uvicorn app.main:app --reload
 | GET | `/api/v1/users` | Danh sách user (manager: trong org; super_admin: tất cả) | ✅ |
 | POST | `/api/v1/users` | Thêm nhân viên (manager thêm vào org của mình) | ✅ |
 | DELETE | `/api/v1/users/{id}` | Xoá nhân viên (manager) / bất kỳ user (super_admin) | ✅ |
+| GET | `/api/v1/users/lookup?email=...` | Tra cứu user theo email (dùng cho chia sẻ) | ✅ |
 | GET | `/api/v1/admin/organizations` | Danh sách tổ chức (super_admin) | ✅ |
 | POST | `/api/v1/admin/organizations` | Tạo tổ chức (super_admin) | ✅ |
 | GET | `/api/v1/admin/organizations/{id}` | Chi tiết tổ chức + thành viên (super_admin) | ✅ |
@@ -183,10 +187,15 @@ uvicorn app.main:app --reload
 | GET | `/api/v1/admin/users` | Danh sách mọi người dùng (super_admin) | ✅ |
 | GET/POST | `/api/v1/folders` | Danh sách / tạo thư mục | ✅ |
 | PUT/DELETE | `/api/v1/folders/{id}` | Đổi tên / xoá thư mục | ✅ |
-| GET/POST | `/api/v1/documents` | Danh sách / upload tài liệu | ✅ |
+| GET/POST | `/api/v1/documents` | Danh sách / upload tài liệu (staff → trạng thái chờ duyệt) | ✅ |
 | GET/PUT/DELETE | `/api/v1/documents/{id}` | Chi tiết / cập nhật / xoá tài liệu | ✅ |
 | GET | `/api/v1/documents/{id}/download` | Tải tài liệu | ✅ |
 | GET | `/api/v1/documents/{id}/versions` | Lịch sử phiên bản | ✅ |
+| GET/POST/DELETE | `/api/v1/documents/{id}/permissions` | Danh sách / thêm / thu hồi quyền chia sẻ | ✅ |
+| POST | `/api/v1/documents/{id}/approval` | Duyệt / từ chối tài liệu | ✅ |
+| GET | `/api/v1/documents/{id}/approvals` | Lịch sử phê duyệt | ✅ |
+| GET | `/api/v1/documents/{id}/audit-logs` | Nhật ký hoạt động của tài liệu | ✅ |
+| GET | `/api/v1/audit-logs?user_id=...` | Nhật ký hoạt động theo người dùng | ✅ |
 | GET | `/api/v1/search?q=...` | Tìm kiếm ngữ nghĩa | ⏳ |
 | POST | `/api/v1/chat` | Hỏi đáp theo tài liệu (RAG) | ⏳ |
 
@@ -231,13 +240,24 @@ Tất cả tài khoản demo dùng mật khẩu `demo123456`.
 | `organizations` | Tổ chức (tên, ngày tạo) |
 | `users` | Người dùng (full_name, email, hashed_password, role, organization_id) |
 | `folders` | Thư mục, hỗ trợ cây phân cấp (parent_id), theo tổ chức/cá nhân |
-| `documents` | Tài liệu (title, file_path, folder_id, owner_id, status, current_version) |
+| `documents` | Tài liệu (title, file_path, folder_id, owner_id, status, current_version, extracted_text, processing_error) |
 | `document_versions` | Phiên bản tài liệu |
-| `permissions` | Phân quyền truy cập theo tài liệu |
-| `audit_logs` | Nhật ký chỉnh sửa |
+| `permissions` | Phân quyền truy cập theo tài liệu (view/edit/admin) |
+| `document_approvals` | Lịch sử phê duyệt (reviewer, decision approved/rejected, lý do) |
+| `audit_logs` | Nhật ký chỉnh sửa (theo tài liệu và người dùng) |
 | `chats` | Hội thoại hỏi đáp |
 | `chat_messages` | Tin nhắn trong hội thoại (role, content) |
 | `password_reset_tokens` | Token đặt lại mật khẩu (hạn 60 phút, dùng 1 lần) |
+
+**Trạng thái tài liệu** (`documents.status`):
+- `pending` — chờ duyệt (staff mới upload, chưa công khai, chưa chia sẻ được)
+- `approved` — đã duyệt, chính thức (công khai với toàn tổ chức, chia sẻ được)
+- `rejected` — bị từ chối duyệt (kèm lý do)
+- `processing` — đang trích xuất văn bản (tự động sau upload)
+- `text_extracted` — đã trích xuất xong văn bản
+- `failed` — trích xuất văn bản thất bại (kèm `processing_error`)
+
+Text đã trích xuất được lưu vào cột `documents.extracted_text` (dùng cho tìm kiếm/RAG ở giai đoạn sau).
 
 Ngoài ra, embeddings của tài liệu được lưu trong **Qdrant** (vector database) phục vụ tìm kiếm ngữ nghĩa và RAG.
 
@@ -259,7 +279,13 @@ Ngoài ra, embeddings của tài liệu được lưu trong **Qdrant** (vector d
 Upload tài liệu (PDF/ảnh/DOCX)
         │
         ▼
-Xử lý tự động:
+Phê duyệt (chỉ tài liệu do nhân viên upload):
+  ├── Staff upload → trạng thái "Chờ duyệt" (chưa công khai, chưa chia sẻ được)
+  ├── Manager xem → Duyệt (→ "Đã duyệt", chính thức) hoặc Từ chối (kèm lý do)
+  └── Sau khi duyệt → công khai toàn tổ chức + chia sẻ / quản lý phiên bản
+        │
+        ▼
+Xử lý tự động (Giai đoạn 3):
   OCR / trích xuất văn bản → chunk (chia đoạn)
         → embedding (vector hoá) → lưu vào Qdrant
         │
@@ -290,8 +316,8 @@ Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ th�
 | 0 | Hạ tầng: FastAPI + PostgreSQL + Alembic, `GET /` và `GET /health` | ✅ Hoàn thành |
 | 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu, hồ sơ cá nhân | ✅ Hoàn thành |
 | 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ✅ Hoàn thành |
-| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant-Doanh nghiệp /chroma | ⏳ Chưa bắt đầu |
+| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant / Chroma | 🔄 Đang triển khai (đã có trích xuất văn bản PDF khi upload) |
 | 4 | Search + Chat (RAG) | ⏳ Chưa bắt đầu |
-| 5 | Nâng cao: summary, phân loại, permissions chi tiết, version, audit log | ⏳ Chưa bắt đầu |
+| 5 | Nâng cao: permissions chi tiết, version, audit log | ✅ Hoàn thành (chia sẻ, phê duyệt, nhật ký) |
 
 > ✅ = hoàn thành, 🔄 = đang triển khai, ⏳ = chưa bắt đầu.
