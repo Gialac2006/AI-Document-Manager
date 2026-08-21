@@ -22,7 +22,8 @@ Sản phẩm gồm: Website, REST API, Docker và tài liệu kỹ thuật.
 - **Phê duyệt tài liệu**: nhân viên upload → "Chờ duyệt" (chưa công khai), quản lý duyệt/từ chối mới chính thức
 - **Chia sẻ tài liệu**: cấp quyền (Xem / Chỉnh sửa / Quản lý) cho người dùng cụ thể qua email
 - **Nhật ký hoạt động (audit log)** theo tài liệu và theo người dùng
-- OCR và chuyển PDF thành văn bản
+- OCR ảnh và PDF scan (Tesseract, hỗ trợ tiếng Việt), chuyển PDF có lớp văn bản thành text trực tiếp
+- Trích xuất văn bản Word/Excel/PowerPoint (`.docx`, `.xlsx`, `.xls`, `.pptx`); `.doc`/`.ppt` tự chuyển đổi qua LibreOffice headless
 - Phiên bản tài liệu (versioning)
 
 ### AI tích hợp
@@ -142,10 +143,12 @@ cp .env.example .env
 
 ### Cách 1: Docker Compose (khuyến nghị)
 ```bash
+cp .env.example .env   # lần đầu
 docker compose up --build
 ```
 - Website: http://localhost
 - API + Swagger: http://localhost:8000/docs
+- pgAdmin (quản lý DB): http://localhost:5050 — đăng nhập bằng `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` (trong `.env`). Server **"AI Document Manager DB"** đã được đăng ký sẵn (host `db`, user `postgres`). Khi mở server lần đầu, nhập `POSTGRES_PASSWORD` (mặc định `postgres`) và tick **Save Password** — lần sau tự vào, không hỏi lại.
 
 ### Cách 2: Chạy thủ công
 
@@ -173,7 +176,7 @@ uvicorn app.main:app --reload
 | POST | `/api/v1/auth/login` | Đăng nhập, nhận token | ✅ |
 | GET | `/api/v1/auth/me` | Thông tin người dùng hiện tại | ✅ |
 | PUT | `/api/v1/auth/me` | Cập nhật hồ sơ (tên, email, mật khẩu) | ✅ |
-| POST | `/api/v1/auth/forgot-password` | Gửi yêu cầu đặt lại mật khẩu (dev mode trả link reset) | ✅ |
+| POST | `/api/v1/auth/forgot-password` | Gửi yêu cầu đặt lại mật khẩu (trả link reset chỉ khi bật `EXPOSE_RESET_TOKEN=true`) | ✅ |
 | GET | `/api/v1/auth/reset-password/validate` | Kiểm tra token đặt lại mật khẩu | ✅ |
 | POST | `/api/v1/auth/reset-password` | Đặt lại mật khẩu bằng token | ✅ |
 | GET | `/api/v1/users` | Danh sách user (manager: trong org; super_admin: tất cả) | ✅ |
@@ -221,26 +224,26 @@ python ..\scripts\seed_data.py
 ```
 
 Kết quả tạo:
-- `super_admin`: `admin@example.com` / `admin123456` (đổi qua env `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`)
+- `super_admin`: `admin@example.com` / `Admin@2026!` (đổi qua env `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`)
 - 2 tổ chức demo (`Cong ty Alpha`, `Truong Dai hoc Beta`) — mỗi org có 1 manager + 2 staff
-- 1 cá nhân (`individual.z@example.com` / `demo123456`)
+- 1 cá nhân (`individual.z@example.com` / `Demo@2026!`)
 
-Tất cả tài khoản demo dùng mật khẩu `demo123456`.
+Tất cả tài khoản demo dùng mật khẩu `Demo@2026!`. Mật khẩu này chỉ dùng cho môi trường demo; trong sản xuất hãy đổi qua biến môi trường hoặc đổi mật khẩu sau khi đăng nhập.
 
 | Vai trò | Email | Mật khẩu |
 |---|---|---|
-| Admin hệ thống | `admin@example.com` | `admin123456` |
-| Quản lý org Alpha | `manager.alpha@example.com` | `demo123456` |
-| Nhân viên org Alpha | `staff.a1@example.com` | `demo123456` |
-| Quản lý org Beta | `manager.beta@example.com` | `demo123456` |
-| Cá nhân | `individual.z@example.com` | `demo123456` |
+| Admin hệ thống | `admin@example.com` | `Admin@2026!` |
+| Quản lý org Alpha | `manager.alpha@example.com` | `Demo@2026!` |
+| Nhân viên org Alpha | `staff.a1@example.com` | `Demo@2026!` |
+| Quản lý org Beta | `manager.beta@example.com` | `Demo@2026!` |
+| Cá nhân | `individual.z@example.com` | `Demo@2026!` |
 
 | Bảng | Mô tả |
 |---|---|
 | `organizations` | Tổ chức (tên, ngày tạo) |
 | `users` | Người dùng (full_name, email, hashed_password, role, organization_id) |
 | `folders` | Thư mục, hỗ trợ cây phân cấp (parent_id), theo tổ chức/cá nhân |
-| `documents` | Tài liệu (title, file_path, folder_id, owner_id, status, current_version, extracted_text, processing_error) |
+| `documents` | Tài liệu (title, file_path, folder_id, owner_id, status, processing_status, current_version, extracted_text, processing_error) |
 | `document_versions` | Phiên bản tài liệu |
 | `permissions` | Phân quyền truy cập theo tài liệu (view/edit/admin) |
 | `document_approvals` | Lịch sử phê duyệt (reviewer, decision approved/rejected, lý do) |
@@ -249,13 +252,19 @@ Tất cả tài khoản demo dùng mật khẩu `demo123456`.
 | `chat_messages` | Tin nhắn trong hội thoại (role, content) |
 | `password_reset_tokens` | Token đặt lại mật khẩu (hạn 60 phút, dùng 1 lần) |
 
-**Trạng thái tài liệu** (`documents.status`):
-- `pending` — chờ duyệt (staff mới upload, chưa công khai, chưa chia sẻ được)
-- `approved` — đã duyệt, chính thức (công khai với toàn tổ chức, chia sẻ được)
-- `rejected` — bị từ chối duyệt (kèm lý do)
-- `processing` — đang trích xuất văn bản (tự động sau upload)
-- `text_extracted` — đã trích xuất xong văn bản
-- `failed` — trích xuất văn bản thất bại (kèm `processing_error`)
+**Trạng thái tài liệu:**
+
+Hai cột riêng biệt, không đè lên nhau:
+
+- `documents.status` — **trạng thái phê duyệt**:
+  - `pending` — chờ duyệt (staff mới upload, chưa công khai, chưa chia sẻ được)
+  - `approved` — đã duyệt, chính thức (công khai với toàn tổ chức, chia sẻ được)
+  - `rejected` — bị từ chối duyệt (kèm lý do)
+- `documents.processing_status` — **trạng thái xử lý AI**:
+  - `uploaded` — vừa tải lên, chưa xử lý
+  - `processing` — đang trích xuất văn bản (tự động sau upload)
+  - `text_extracted` — đã trích xuất xong văn bản
+  - `failed` — trích xuất văn bản thất bại (kèm `processing_error`)
 
 Text đã trích xuất được lưu vào cột `documents.extracted_text` (dùng cho tìm kiếm/RAG ở giai đoạn sau).
 
@@ -300,6 +309,50 @@ Người dùng khai thác:
 Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ thống
 ```
 
+## Làm việc nhóm
+
+Quy tắc chung để cả nhóm cùng tiến mà không đụng độ code và không hỏng DB.
+
+### 1. Git workflow
+- Tạo **nhánh riêng** cho từng việc: `git checkout -b feat/ocr`, `fix/status-default`, `docs/readme`...
+- Tên nhánh/tên commit gợi ý: `feat:`, `fix:`, `docs:`, `refactor:`.
+- Trước khi bắt đầu: `git pull`. Khi xong: push và **tạo Pull Request** (dùng GitHub) để người khác review.
+- Chỉ merge lên nhánh chính khi PR được duyệt và **build/test pass** (`npm run build` + backend import OK).
+- Không tự ý commit file `.env`, `storage/uploads/*`, `node_modules/`, `dist/` (đã có `.gitignore`).
+
+### 2. Không lộ bí mật
+- `.env` **không bao giờ commit**. Muốn thêm biến mới → thêm vào `.env.example` (giá trị mẫu) để cả nhóm copy được.
+- Bất kỳ ai nhận project: `cp .env.example .env` rồi sửa `SECRET_KEY` thành chuỗi riêng.
+
+### 3. Thay đổi cơ sở dữ liệu
+- Sửa model trong `backend/app/models/` **bắt buộc** đi kèm migration Alembic — không sửa DB tay.
+```bash
+cd backend
+alembic revision --autogenerate -m "mô tả"
+alembic upgrade head
+```
+- Mọi thành viên sau khi `git pull` có migration mới: chạy `alembic upgrade head` (hoặc dùng lệnh migrate ở mục 4). Alembic sẽ tự bỏ qua migration đã chạy.
+
+### 4. Cheat-sheet Docker (mỗi người tự chạy trên máy mình)
+```bash
+docker compose up -d --build      # build + chạy toàn bộ stack
+docker compose up -d --build backend   # chỉ build lại backend
+docker compose ps                 # xem trạng thái
+docker compose logs -f backend    # xem log backend
+docker compose restart            # khởi động lại
+docker compose down               # dừng (giữ dữ liệu trong volume)
+docker compose down -v            # dừng + XOÁ toàn bộ dữ liệu (cẩn thận!)
+docker compose exec db psql -U postgres -d ai_document_manager   # truy vấn DB
+python scripts/seed_data.py       # seed dữ liệu demo + admin
+```
+- Quy trình pull mới: `git pull` → `docker compose up -d --build` → `alembic upgrade head` (nếu có migration mới) → seed lại nếu cần.
+- Khi cài thêm package: **backend** sửa `backend/requirements.txt` (không `pip install` rồi quên), **frontend** `npm install <pkg>` — cả hai đều cần rebuild image.
+
+### 5. Kiểm tra trước khi push
+- Backend: `python -c "import app.main"` (không lỗi import).
+- Frontend: `cd frontend && npm run build` và `npm run lint`.
+- Chạy thử luồng chính: đăng nhập → upload tài liệu → mở chi tiết (xem OCR/text) → duyệt tài liệu.
+
 ## Sản phẩm
 
 - Website (React)
@@ -316,7 +369,7 @@ Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ th�
 | 0 | Hạ tầng: FastAPI + PostgreSQL + Alembic, `GET /` và `GET /health` | ✅ Hoàn thành |
 | 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu, hồ sơ cá nhân | ✅ Hoàn thành |
 | 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ✅ Hoàn thành |
-| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant / Chroma | 🔄 Đang triển khai (đã có trích xuất văn bản PDF khi upload) |
+| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant / Chroma | 🔄 Đang triển khai (đã có trích xuất văn bản PDF khi upload + **OCR ảnh/PDF scan bằng Tesseract**) |
 | 4 | Search + Chat (RAG) | ⏳ Chưa bắt đầu |
 | 5 | Nâng cao: permissions chi tiết, version, audit log | ✅ Hoàn thành (chia sẻ, phê duyệt, nhật ký) |
 

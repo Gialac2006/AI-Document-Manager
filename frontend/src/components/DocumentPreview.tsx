@@ -23,6 +23,9 @@ export default function DocumentPreview({
   const [error, setError] = useState("");
 
   const isDocx = isDocxFile(fileName, fileType);
+  // PDF dùng trình xem gốc của trình duyệt (không chạy script), không cần sandbox
+  const isPdf =
+    (fileType || fileName.split(".").pop() || "").toLowerCase().replace(/^\./, "") === "pdf";
 
   // Tải file xem trước theo documentId/version, chuyển DOCX sang HTML
   useEffect(() => {
@@ -119,6 +122,8 @@ export default function DocumentPreview({
       src={objectUrl}
       title={fileName}
       className="preview-frame"
+      sandbox={isPdf ? undefined : ""}
+      referrerPolicy="no-referrer"
     />
   );
 }

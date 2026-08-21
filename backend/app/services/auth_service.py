@@ -17,7 +17,8 @@ from app.schemas.auth import LoginRequest, RegisterRequest, Token
 
 # Đăng ký tài khoản cá nhân hoặc tạo tổ chức mới
 def register(db: Session, data: RegisterRequest) -> tuple[User, Token]:
-    if user_repository.get_by_email(db, data.email):
+    email = data.email.lower().strip()
+    if user_repository.get_by_email(db, email):
         raise DuplicateError("Email đã được đăng ký")
 
     hashed = hash_password(data.password)
@@ -31,7 +32,7 @@ def register(db: Session, data: RegisterRequest) -> tuple[User, Token]:
         user = user_repository.create(
             db,
             full_name=data.full_name.strip(),
-            email=data.email,
+            email=email,
             hashed_password=hashed,
             role=UserRole.MANAGER,
             organization_id=organization.id,
@@ -40,7 +41,7 @@ def register(db: Session, data: RegisterRequest) -> tuple[User, Token]:
         user = user_repository.create(
             db,
             full_name=data.full_name.strip(),
-            email=data.email,
+            email=email,
             hashed_password=hashed,
             role=UserRole.INDIVIDUAL,
         )
@@ -51,7 +52,7 @@ def register(db: Session, data: RegisterRequest) -> tuple[User, Token]:
 
 # Xác thực email và mật khẩu khi đăng nhập
 def authenticate(db: Session, data: LoginRequest) -> User:
-    user = user_repository.get_by_email(db, data.email)
+    user = user_repository.get_by_email(db, data.email.lower().strip())
     if not user or not verify_password(data.password, user.hashed_password):
         raise UnauthorizedError("Email hoặc mật khẩu không đúng")
     return user
@@ -65,7 +66,7 @@ def issue_token(user: User) -> Token:
 # Tạo token đặt lại mật khẩu cho email yêu cầu
 def request_password_reset(db: Session, email: str) -> dict:
     detail = "Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu"
-    user = user_repository.get_by_email(db, email)
+    user = user_repository.get_by_email(db, email.lower().strip())
     if not user:
         return {"detail": detail, "reset_token": None, "reset_url": None}
 
@@ -77,18 +78,20 @@ def request_password_reset(db: Session, email: str) -> dict:
         db, token=token, user_id=user.id, expires_at=expires_at
     )
 
-    if settings.is_production:
-        if settings.email_enabled:
-            # TODO: gửi email thật qua SMTP khi có cấu hình
-            pass
-        return {"detail": detail, "reset_token": None, "reset_url": None}
+    if settings.email_enabled:
+        # TODO: gửi email thật qua SMTP khi có cấu hình
+        pass
 
-    reset_url = f"{settings.frontend_url}/reset-password?token={token}"
-    return {
-        "detail": "Chế độ dev: dùng link bên dưới để đặt lại mật khẩu",
-        "reset_token": token,
-        "reset_url": reset_url,
-    }
+    # Chỉ trả token/link trong response khi bật cờ expose_reset_token (dev)
+    if settings.expose_reset_token:
+        reset_url = f"{settings.frontend_url}/reset-password?token={token}"
+        return {
+            "detail": "Chế độ dev: dùng link bên dưới để đặt lại mật khẩu",
+            "reset_token": token,
+            "reset_url": reset_url,
+        }
+
+    return {"detail": detail, "reset_token": None, "reset_url": None}
 
 
 # Kiểm tra token đặt lại mật khẩu còn hợp lệ

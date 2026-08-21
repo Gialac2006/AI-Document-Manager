@@ -11,7 +11,7 @@ def get_by_id(db: Session, document_id: int) -> Document | None:
     return db.get(Document, document_id)
 
 
-# Lấy danh sách tài liệu theo tổ chức, người dùng hoặc thư mục
+# Lấy danh sách tài liệu theo tổ chức, người dùng hoặc thư mục (có phân trang)
 def list_all(
     db: Session,
     *,
@@ -19,7 +19,14 @@ def list_all(
     owner_id: int | None = None,
     user_id: int | None = None,
     folder_id: int | None = None,
-) -> list[Document]:
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[Document], int]:
+    """Trả về (danh sách tài liệu, tổng số bản ghi).
+
+    Khi truyền user_id (staff/individual), chỉ trả về tài liệu thuộc phạm vi
+    user: tài liệu do user tạo, được chia sẻ với user, hoặc đã được duyệt.
+    """
     query = select(Document)
     conditions: list = []
     if organization_id is not None:
@@ -27,20 +34,32 @@ def list_all(
     elif owner_id is not None:
         conditions.append(Document.owner_id == owner_id)
 
-    if conditions and user_id is not None:
+    if user_id is not None:
         query = query.outerjoin(
             Permission,
             (Permission.document_id == Document.id)
             & (Permission.user_id == user_id),
         )
-        conditions.append(Permission.id.isnot(None))
+        conditions.append(
+            or_(
+                Document.owner_id == user_id,
+                Permission.id.isnot(None),
+                Document.status == "approved",
+            )
+        )
 
     if conditions:
         query = query.where(or_(*conditions))
     if folder_id is not None:
         query = query.where(Document.folder_id == folder_id)
-    query = query.order_by(Document.updated_at.desc())
-    return list(db.scalars(query).all())
+
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    query = (
+        query.order_by(Document.updated_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(db.scalars(query).all()), total
 
 
 # Tạo tài liệu mới
@@ -54,7 +73,8 @@ def create(
     folder_id: int | None,
     organization_id: int | None,
     owner_id: int | None,
-    status: str = "uploaded",
+    status: str = "pending",
+    processing_status: str = "uploaded",
 ) -> Document:
     document = Document(
         title=title,
@@ -65,6 +85,7 @@ def create(
         organization_id=organization_id,
         owner_id=owner_id,
         status=status,
+        processing_status=processing_status,
     )
     db.add(document)
     db.commit()
@@ -169,19 +190,18 @@ def update_processing(
     db: Session,
     document: Document,
     *,
-    status: str,
+    processing_status: str,
     extracted_text: str | None = None,
     processing_error: str | None = None,
 ) -> Document:
     """
-    Cập nhật trạng thái và kết quả xử lý của một tài liệu.
+    Cập nhật trạng thái xử lý AI và kết quả trích xuất của một tài liệu.
 
-    Hàm này được sử dụng khi tài liệu bắt đầu xử lý,
-    khi trích xuất thành công hoặc khi xảy ra lỗi.
+    Chỉ ghi vào cột processing_status, không đụng tới status (phê duyệt).
     """
 
     # QUAN TRỌNG: Trạng thái hiện tại của quá trình xử lý
-    document.status = status
+    document.processing_status = processing_status
 
     # QUAN TRỌNG: Toàn bộ văn bản lấy được từ PDF hoặc OCR
     document.extracted_text = extracted_text

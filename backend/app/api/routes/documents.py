@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -27,16 +27,25 @@ from app.services.scope_service import AccessLevel
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-# Lấy danh sách tài liệu mà người dùng có quyền xem
+# Lấy danh sách tài liệu mà người dùng có quyền xem (có phân trang)
 @router.get("", response_model=list[DocumentRead])
 def list_documents(
     folder_id: int | None = None,
+    response: Response = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return document_service.list_documents(
-        db, current_user=current_user, folder_id=folder_id
+    documents, total = document_service.list_documents(
+        db,
+        current_user=current_user,
+        folder_id=folder_id,
+        page=page,
+        page_size=page_size,
     )
+    response.headers["X-Total-Count"] = str(total)
+    return documents
 
 
 # Tải lên tài liệu mới kèm tên và thư mục tuỳ chọn
@@ -67,6 +76,19 @@ def get_document(
     return document_service.get_document(
         db, document_id=document_id, current_user=current_user
     )
+
+
+# Lấy nội dung văn bản đã trích xuất của tài liệu
+@router.get("/{document_id}/text")
+def get_document_text(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document = document_service.get_document(
+        db, document_id=document_id, current_user=current_user
+    )
+    return {"extracted_text": document.extracted_text or ""}
 
 
 # Tải lên phiên bản mới cho tài liệu (yêu cầu quyền chỉnh sửa)
@@ -142,7 +164,11 @@ def download_document(
     full_path = storage_service.get_full_path(document.file_path)
     if not full_path.exists():
         raise NotFoundError("File không còn tồn tại trên máy chủ")
-    return FileResponse(str(full_path), filename=document.file_name)
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    }
+    return FileResponse(str(full_path), filename=document.file_name, headers=headers)
 
 
 # Lấy danh sách các phiên bản của tài liệu
@@ -175,7 +201,11 @@ def download_version(
     full_path = storage_service.get_full_path(record.file_path)
     if not full_path.exists():
         raise NotFoundError("File không còn tồn tại trên máy chủ")
-    return FileResponse(str(full_path), filename=record.file_name)
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    }
+    return FileResponse(str(full_path), filename=record.file_name, headers=headers)
 
 
 # Lấy danh sách quyền chia sẻ của tài liệu kèm thông tin người dùng

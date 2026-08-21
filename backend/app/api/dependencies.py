@@ -20,7 +20,11 @@ def get_current_user(
     payload = decode_access_token(credentials.credentials)
     if not payload or "sub" not in payload:
         raise UnauthorizedError("Token không hợp lệ hoặc đã hết hạn")
-    user = user_repository.get_by_id(db, int(payload["sub"]))
+    try:
+        user_id = int(payload["sub"])
+    except (TypeError, ValueError):
+        raise UnauthorizedError("Token không hợp lệ hoặc đã hết hạn")
+    user = user_repository.get_by_id(db, user_id)
     if not user:
         raise UnauthorizedError("Người dùng không tồn tại")
     return user

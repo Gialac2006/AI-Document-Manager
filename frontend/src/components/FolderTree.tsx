@@ -6,6 +6,7 @@ import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
 import { useAuth } from "../hooks/useAuth";
 import type { Document, Folder } from "../types";
+import { fileTypeInfo } from "../utils/documentMeta";
 import Button from "./ui/Button.tsx";
 
 interface FolderNode {
@@ -29,16 +30,6 @@ function buildTree(folders: Folder[]): FolderNode[] {
     }
   }
   return roots;
-}
-
-// Trả về biểu tượng tương ứng với loại file
-function fileIcon(fileType: string | null): string {
-  if (fileType === ".pdf") return "📕";
-  if (fileType === ".txt" || fileType === ".md") return "📝";
-  if (fileType === ".doc" || fileType === ".docx") return "📘";
-  if (fileType === ".xls" || fileType === ".xlsx" || fileType === ".csv") return "📊";
-  if (fileType === ".png" || fileType === ".jpg" || fileType === ".jpeg") return "🖼️";
-  return "📄";
 }
 
 interface FolderNodeProps {
@@ -265,7 +256,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
     setPinnedLoading(true);
     try {
       const docs = await documentApi.list(id);
-      setPinnedDocs(docs);
+      setPinnedDocs(docs.items);
     } catch (err) {
       setPinnedError((err as Error).message);
     } finally {
@@ -395,7 +386,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
             <ul className="popover-list">
               {pinnedDocs.map((doc) => (
                 <li key={doc.id}>
-                  <span className="popover-file-icon">{fileIcon(doc.file_type)}</span>
+                  <span className="popover-file-icon">{fileTypeInfo(doc.file_name, doc.file_type).icon}</span>
                   <Link to={`/documents/${doc.id}`} className="popover-file-name" title={doc.file_name}>
                     {doc.title}
                   </Link>

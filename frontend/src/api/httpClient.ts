@@ -47,10 +47,10 @@ function redirectToLogin() {
   }
 }
 
-export async function request<T = unknown>(
+async function requestRaw(
   path: string,
   { method = "GET", body, auth = true }: RequestOptions = {}
-): Promise<T> {
+): Promise<Response> {
   const isFormData = body instanceof FormData;
   const headers: Record<string, string> = {};
   if (!isFormData) {
@@ -83,9 +83,28 @@ export async function request<T = unknown>(
     }
     throw new Error(await extractError(response));
   }
+  return response;
+}
 
+export async function request<T = unknown>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const response = await requestRaw(path, options);
   if (response.status === 204) {
     return null as T;
   }
   return response.json();
+}
+
+// Giống request nhưng trả thêm headers (để đọc X-Total-Count khi phân trang)
+export async function requestWithHeaders<T = unknown>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<{ data: T; headers: Headers }> {
+  const response = await requestRaw(path, options);
+  if (response.status === 204) {
+    return { data: null as T, headers: response.headers };
+  }
+  return { data: await response.json(), headers: response.headers };
 }

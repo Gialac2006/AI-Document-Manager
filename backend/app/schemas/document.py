@@ -15,6 +15,8 @@ class DocumentRead(BaseModel):
     organization_id: int | None = None
     owner_id: int | None = None
     status: str
+    processing_status: str = "uploaded"
+    processing_error: str | None = None
     current_version: int
     created_at: datetime
     updated_at: datetime

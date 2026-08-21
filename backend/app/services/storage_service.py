@@ -30,7 +30,11 @@ def save_file(file: UploadFile, *, owner_id: int) -> str:
 
 
 def get_full_path(rel_path: str) -> Path:
-    return Path(settings.storage_path) / rel_path
+    base = Path(settings.storage_path).resolve()
+    full = (base / rel_path).resolve()
+    if not full.is_relative_to(base):
+        raise BadRequestError("Đường dẫn file không hợp lệ")
+    return full
 
 
 def delete_file(rel_path: str) -> None:

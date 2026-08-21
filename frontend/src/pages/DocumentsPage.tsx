@@ -5,8 +5,11 @@ import { folderApi } from "../api/folderApi";
 import DocumentCard from "../components/DocumentCard.tsx";
 import FolderTree from "../components/FolderTree.tsx";
 import UploadDocument from "../components/UploadDocument.tsx";
+import Button from "../components/ui/Button.tsx";
 import Spinner from "../components/ui/Spinner.tsx";
 import type { Document, Folder } from "../types";
+
+const PAGE_SIZE = 20;
 
 // Trang quản lý tài liệu: duyệt thư mục, tải lên, tìm kiếm và xoá tài liệu
 export default function DocumentsPage() {
@@ -16,23 +19,39 @@ export default function DocumentsPage() {
   const [search, setSearch] = useState("");
   const [showUpload, setShowUpload] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const loadData = useCallback(async (folderId: number | null) => {
-    try {
-      const [folderList, docList] = await Promise.all([
-        folderApi.list(),
-        documentApi.list(folderId),
-      ]);
-      setFolders(folderList);
-      setDocuments(docList);
-      setError("");
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+  const loadData = useCallback(
+    async (folderId: number | null, targetPage = 1, append = false) => {
+      try {
+        const [folderList, docResult] = await Promise.all([
+          folderApi.list(),
+          documentApi.list(folderId, targetPage, PAGE_SIZE),
+        ]);
+        setFolders(folderList);
+        setDocuments((prev) => (append ? [...prev, ...docResult.items] : docResult.items));
+        setTotal(docResult.total);
+        setPage(targetPage);
+        setError("");
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [],
+  );
+
+  const loadMore = useCallback(() => {
+    if (page * PAGE_SIZE < total && !loadingMore) {
+      setLoadingMore(true);
+      loadData(selectedFolder, page + 1, true);
     }
-  }, []);
+  }, [page, total, selectedFolder, loadingMore, loadData]);
 
   // Tự làm mới danh sách khi quay lại tab/đổi folder và mỗi 10 giây
   useEffect(() => {
@@ -40,16 +59,16 @@ export default function DocumentsPage() {
   }, [selectedFolder, loadData]);
 
   useEffect(() => {
-    const onFocus = () => loadData(selectedFolder);
+    const onFocus = () => loadData(selectedFolder, page);
     window.addEventListener("focus", onFocus);
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") loadData(selectedFolder);
+      if (document.visibilityState === "visible") loadData(selectedFolder, page);
     }, 10000);
     return () => {
       window.removeEventListener("focus", onFocus);
       window.clearInterval(timer);
     };
-  }, [selectedFolder, loadData]);
+  }, [selectedFolder, loadData, page]);
 
   // Xoá tài liệu sau khi xác nhận và cập nhật lại danh sách
   const handleDelete = async (id: number) => {
@@ -118,7 +137,7 @@ export default function DocumentsPage() {
         <section className="documents-main">
           <div className="documents-toolbar">
             <span className="badge">{folderName}</span>
-            <span className="muted">{filteredDocuments.length} tài liệu</span>
+            <span className="muted">{search ? filteredDocuments.length : total} tài liệu</span>
             <div className="toolbar-spacer"></div>
             <div className="toolbar-search">
               <span>🔍</span>
@@ -158,15 +177,24 @@ export default function DocumentsPage() {
               )}
             </div>
           ) : (
-            <div className="document-grid">
-              {filteredDocuments.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  document={doc}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+            <>
+              <div className="document-grid">
+                {filteredDocuments.map((doc) => (
+                  <DocumentCard
+                    key={doc.id}
+                    document={doc}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+              {documents.length < total && (
+                <div className="load-more-wrap">
+                  <Button variant="secondary" disabled={loadingMore} onClick={loadMore}>
+                    {loadingMore ? "Đang tải..." : "Xem thêm tài liệu"}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

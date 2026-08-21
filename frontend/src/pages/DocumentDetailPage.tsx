@@ -16,7 +16,7 @@ import type {
   Folder,
   Permission,
 } from "../types";
-import { fileTypeInfo, isPreviewable, statusInfo } from "../utils/documentMeta";
+import { fileTypeInfo, isPreviewable, normalizeAccessLevel, processingStatusInfo, statusInfo } from "../utils/documentMeta";
 import { formatDate } from "../utils/format";
 
 const ACCESS_LABELS: Record<string, string> = {
@@ -57,6 +57,7 @@ function actionLabel(action: string): string {
 export default function DocumentDetailPage() {
   const { id } = useParams();
   const docId = Number(id);
+  const invalidId = !id || !Number.isInteger(docId) || docId <= 0;
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -81,6 +82,10 @@ export default function DocumentDetailPage() {
   const [sharing, setSharing] = useState(false);
   const [approvalNote, setApprovalNote] = useState("");
   const [approving, setApproving] = useState(false);
+  const [extractedText, setExtractedText] = useState("");
+  const [showExtracted, setShowExtracted] = useState(false);
+  const [textLoading, setTextLoading] = useState(false);
+  const [textError, setTextError] = useState("");
 
   const resetFileInput = () => {
     if (fileInputRef.current) {
@@ -136,8 +141,20 @@ export default function DocumentDetailPage() {
   }, [docId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!invalidId) load();
+  }, [load, invalidId]);
+
+  if (invalidId) {
+    return (
+      <div>
+        <h1>Chi tiết tài liệu</h1>
+        <div className="alert alert-error">ID tài liệu không hợp lệ</div>
+        <Link to="/documents" className="primary-link">
+          ← Quay lại tài liệu
+        </Link>
+      </div>
+    );
+  }
 
   // Lưu thay đổi tiêu đề và thư mục của tài liệu
   const handleSave = async () => {
@@ -220,6 +237,25 @@ export default function DocumentDetailPage() {
     }
   };
 
+  // Tải hiển thị nội dung văn bản đã trích xuất (OCR/text)
+  const toggleExtracted = async () => {
+    if (showExtracted) {
+      setShowExtracted(false);
+      return;
+    }
+    setTextLoading(true);
+    setTextError("");
+    try {
+      const { extracted_text } = await documentApi.text(docId);
+      setExtractedText(extracted_text);
+      setShowExtracted(true);
+    } catch (err) {
+      setTextError((err as Error).message);
+    } finally {
+      setTextLoading(false);
+    }
+  };
+
   if (loading) return <Spinner />;
 
   if (!document) {
@@ -234,12 +270,13 @@ export default function DocumentDetailPage() {
     );
   }
 
-  const access = document.access_level ?? "view";
+  const access = normalizeAccessLevel(document.access_level);
   const canManage = access === "manage";
   const canEdit = access === "edit" || canManage;
   const canDelete = canManage;
   const meta = fileTypeInfo(document.file_name, document.file_type);
   const status = statusInfo(document.status);
+  const procStatus = processingStatusInfo(document.processing_status);
   const isPending = document.status === "pending";
   const previewable = isPreviewable(document.file_name, document.file_type);
   const activeVersion =
@@ -484,6 +521,9 @@ export default function DocumentDetailPage() {
               <span className={`status-badge ${status.cls}`}>
                 {status.label}
               </span>
+              <span className={`status-badge ${procStatus.cls}`}>
+                {procStatus.label}
+              </span>
               <p className="ai-status-desc">
                 {status.cls === "pending" &&
                   "Tài liệu đang chờ quản lý duyệt trước khi chính thức sử dụng trong hệ thống."}
@@ -491,15 +531,38 @@ export default function DocumentDetailPage() {
                   "Tài liệu đã được duyệt và chính thức sử dụng trong hệ thống."}
                 {status.cls === "rejected" &&
                   "Tài liệu bị từ chối duyệt. Liên hệ quản lý để biết lý do."}
-                {status.cls === "indexed" &&
-                  "Tài liệu đã được OCR và đưa vào chỉ mục tìm kiếm."}
-                {status.cls === "processing" &&
+                {procStatus.cls === "processing" &&
                   "Tài liệu đang được AI xử lý. Vui lòng chờ trong giây lát."}
-                {status.cls === "neutral" &&
-                  "Tài liệu chưa qua xử lý. Hệ thống sẽ chạy OCR/AI trong Giai đoạn 3."}
+                {procStatus.cls === "indexed" &&
+                  "Nội dung tài liệu đã được trích xuất và sẵn sàng cho tìm kiếm."}
+                {procStatus.cls === "rejected" &&
+                  status.cls !== "rejected" &&
+                  document.processing_error &&
+                  `Lỗi xử lý: ${document.processing_error}`}
               </p>
             </div>
           </section>
+
+          {procStatus.cls === "indexed" && (
+            <section className="panel">
+              <h2 className="panel-title">Nội dung đã trích xuất</h2>
+              <Button
+                variant="secondary"
+                onClick={toggleExtracted}
+                disabled={textLoading}
+              >
+                {textLoading
+                  ? "Đang tải..."
+                  : showExtracted
+                    ? "Ẩn nội dung"
+                    : "Xem nội dung đã trích xuất"}
+              </Button>
+              {textError && <div className="alert alert-error">{textError}</div>}
+              {showExtracted && extractedText && (
+                <pre className="extracted-text">{extractedText}</pre>
+              )}
+            </section>
+          )}
 
           {canShare && (
             <section className="panel">
@@ -579,6 +642,12 @@ export default function DocumentDetailPage() {
                 <div className="empty-state">
                   <span className="empty-icon">✅</span>
                   Tài liệu đã được duyệt và chính thức sử dụng.
+                </div>
+              ) : document.status === "rejected" ? (
+                <div className="empty-state">
+                  <span className="empty-icon">⛔</span>
+                  Tài liệu đã bị từ chối duyệt. Nhân viên có thể tải bản mới để
+                  gửi lại duyệt.
                 </div>
               ) : (
                 <>

@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
     content = (
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="password">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+          <label htmlFor="password">Mật khẩu mới (tối thiểu 8 ký tự)</label>
           <PasswordInput
             id="password"
             required

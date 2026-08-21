@@ -130,11 +130,11 @@ export default function RegisterPage() {
                   <PasswordInput
                     id="password"
                     required
-                    minLength={6}
+                    minLength={8}
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Tối thiểu 6 ký tự"
+                    placeholder="Tối thiểu 8 ký tự"
                   />
                 </div>
 

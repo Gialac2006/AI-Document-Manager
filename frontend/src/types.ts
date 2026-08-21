@@ -39,6 +39,8 @@ export interface Document {
   organization_id: number | null;
   owner_id: number | null;
   status: string;
+  processing_status?: string;
+  processing_error?: string | null;
   current_version: number;
   created_at: string;
   updated_at: string;
