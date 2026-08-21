@@ -5,7 +5,7 @@ import type {
   DocumentVersion,
   Permission,
 } from "../types";
-import { request } from "./httpClient";
+import { request, requestWithHeaders } from "./httpClient";
 
 const API_BASE_URL = "/api/v1";
 
@@ -77,15 +77,31 @@ export const documentApi = {
     });
   },
 
-  // Lấy danh sách tài liệu (có thể theo thư mục)
-  list(folderId?: number | null): Promise<Document[]> {
-    const query = folderId ? `?folder_id=${folderId}` : "";
-    return request<Document[]>(`/documents${query}`);
+  // Lấy danh sách tài liệu (có thể theo thư mục, có phân trang)
+  async list(
+    folderId?: number | null,
+    page = 1,
+    pageSize = 20,
+  ): Promise<{ items: Document[]; total: number }> {
+    const params = new URLSearchParams();
+    if (folderId) params.set("folder_id", String(folderId));
+    params.set("page", String(page));
+    params.set("page_size", String(pageSize));
+    const { data, headers } = await requestWithHeaders<Document[]>(
+      `/documents?${params.toString()}`,
+    );
+    const total = Number(headers.get("x-total-count") || data.length);
+    return { items: data, total };
   },
 
   // Lấy chi tiết tài liệu theo id
   get(id: number): Promise<Document> {
     return request<Document>(`/documents/${id}`);
+  },
+
+  // Lấy nội dung văn bản đã trích xuất của tài liệu
+  text(id: number): Promise<{ extracted_text: string }> {
+    return request<{ extracted_text: string }>(`/documents/${id}/text`);
   },
 
   // Cập nhật tiêu đề/thư mục của tài liệu

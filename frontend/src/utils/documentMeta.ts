@@ -1,4 +1,7 @@
 // Thông tin hiển thị của một loại file (icon + class CSS)
+import type { AccessLevel } from "../types";
+
+// Thông tin hiển thị của một loại file (icon + class CSS)
 export interface FileTypeMeta {
   icon: string;
   cls: string;
@@ -69,23 +72,39 @@ export function isImageFile(fileName: string, fileType: string | null): boolean 
   return IMAGE_EXTENSIONS.has(ext) || ["img"].includes(ext);
 }
 
-// Lấy nhãn và class hiển thị theo trạng thái tài liệu
+// Lấy nhãn và class hiển thị theo trạng thái phê duyệt tài liệu
 export function statusInfo(status: string): StatusMeta {
   const s = (status || "").toLowerCase();
   if (s === "pending") {
     return { label: "Chờ duyệt", cls: "pending" };
   }
-  if (s === "approved" || s === "uploaded") {
-    return { label: "Đã duyệt", cls: "approved" };
-  }
   if (s === "rejected") {
     return { label: "Bị từ chối", cls: "rejected" };
   }
-  if (s === "completed" || s === "indexed") {
-    return { label: "Đã index", cls: "indexed" };
+  if (s === "approved") {
+    return { label: "Đã duyệt", cls: "approved" };
   }
+  return { label: "Khác", cls: "neutral" };
+}
+
+// Lấy nhãn và class hiển thị theo trạng thái xử lý AI
+export function processingStatusInfo(status?: string | null): StatusMeta {
+  const s = (status || "").toLowerCase();
   if (s === "processing") {
     return { label: "Đang xử lý AI", cls: "processing" };
   }
-  return { label: "Chờ OCR", cls: "neutral" };
+  if (s === "text_extracted" || s === "completed" || s === "indexed") {
+    return { label: "Đã trích xuất", cls: "indexed" };
+  }
+  if (s === "failed") {
+    return { label: "Lỗi xử lý", cls: "rejected" };
+  }
+  return { label: "Chưa xử lý", cls: "neutral" };
+}
+
+// Chuẩn hoá access_level từ backend (admin) sang chuẩn hiển thị (manage)
+export function normalizeAccessLevel(level?: string | null): AccessLevel {
+  if (level === "admin") return "manage";
+  if (level === "manage" || level === "edit" || level === "view") return level;
+  return "view";
 }

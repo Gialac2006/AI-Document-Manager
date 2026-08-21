@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { documentApi } from "../api/documentApi";
 import { useAuth } from "../hooks/useAuth";
 import type { Document } from "../types";
-import { fileTypeInfo, statusInfo } from "../utils/documentMeta";
+import { fileTypeInfo, normalizeAccessLevel, statusInfo } from "../utils/documentMeta";
 import { formatDate } from "../utils/format";
 
 interface DocumentCardProps {
@@ -15,7 +15,7 @@ interface DocumentCardProps {
 export default function DocumentCard({ document, onDelete }: DocumentCardProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "super_admin";
-  const canDelete = isAdmin || document.access_level === "manage";
+  const canDelete = isAdmin || normalizeAccessLevel(document.access_level) === "manage";
   const meta = fileTypeInfo(document.file_name, document.file_type);
   const status = statusInfo(document.status);
 

@@ -15,11 +15,15 @@ interface UploadDocumentProps {
 export default function UploadDocument({ folderId, folders, onUploaded }: UploadDocumentProps) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
-  const [targetFolder, setTargetFolder] = useState("");
+  const [targetFolder, setTargetFolder] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Thư mục hiệu lực: ưu tiên lựa chọn trong form ("" = Gốc), nếu chưa chọn thì
+  // mới dùng folder đang chọn trong cây
+  const effectiveFolder = targetFolder !== null ? targetFolder : (folderId ? String(folderId) : "");
 
   // Gửi file và thông tin lên server
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -34,11 +38,12 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
       const formData = new FormData();
       formData.append("file", file);
       if (title.trim()) formData.append("title", title.trim());
-      if (targetFolder) formData.append("folder_id", targetFolder);
+      if (effectiveFolder) formData.append("folder_id", effectiveFolder);
       await documentApi.upload(formData);
       setFile(null);
       setTitle("");
-      setTargetFolder("");
+      setTargetFolder(null);
+      if (inputRef.current) inputRef.current.value = "";
       if (onUploaded) onUploaded();
     } catch (err) {
       setError((err as Error).message);
@@ -53,8 +58,6 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
     setDragging(false);
     if (e.dataTransfer.files?.length) setFile(e.dataTransfer.files[0] ?? null);
   };
-
-  const effectiveFolder = targetFolder || folderId || "";
 
   return (
     <form className="upload-form" onSubmit={handleSubmit}>

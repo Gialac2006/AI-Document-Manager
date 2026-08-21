@@ -14,7 +14,10 @@ class Settings:
         "DATABASE_URL",
         "postgresql://postgres:postgres@localhost:5432/ai_document_manager",
     )
-    secret_key: str = os.getenv("SECRET_KEY") or secrets.token_hex(32)
+    # Bật cờ này thì forgot-password trả reset token/link trong response (chỉ dùng cho dev).
+    # Mặc định tắt: kể cả ở development cũng không lộ token.
+    expose_reset_token: bool = os.getenv("EXPOSE_RESET_TOKEN", "false").lower() == "true"
+    secret_key: str = os.getenv("SECRET_KEY", "")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
     reset_token_expire_minutes: int = int(
@@ -45,3 +48,11 @@ class Settings:
 
 # Đối tượng cấu hình toàn cục dùng chung trong app
 settings = Settings()
+
+if not settings.secret_key:
+    if settings.is_production:
+        raise RuntimeError(
+            "SECRET_KEY bắt buộc phải đặt trong môi trường production. "
+            "Tạo bằng: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    settings.secret_key = secrets.token_hex(32)

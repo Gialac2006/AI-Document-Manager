@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import require_super_admin
 from app.core.exceptions import DuplicateError, NotFoundError
 from app.database.connection import get_db
+from app.models.document import Document
+from app.models.document_version import DocumentVersion
 from app.models.user import User
 from app.repositories import (
     admin_repository,
@@ -18,6 +21,7 @@ from app.schemas.organization import (
     OrganizationRead,
 )
 from app.schemas.user import UserRead
+from app.services import storage_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -73,6 +77,26 @@ def delete_organization(
     organization = organization_repository.get_by_id(db, organization_id)
     if not organization:
         raise NotFoundError("Tổ chức không tồn tại")
+    # Xoá file vật lý của toàn bộ tài liệu và các phiên bản trong tổ chức
+    file_paths = list(
+        db.scalars(
+            select(Document.file_path).where(
+                Document.organization_id == organization_id
+            )
+        ).all()
+    )
+    version_paths = list(
+        db.scalars(
+            select(DocumentVersion.file_path)
+            .join(Document, DocumentVersion.document_id == Document.id)
+            .where(Document.organization_id == organization_id)
+        ).all()
+    )
+    for rel_path in set(file_paths + version_paths):
+        try:
+            storage_service.delete_file(rel_path)
+        except Exception:
+            continue
     db.delete(organization)
     db.commit()
 

@@ -35,3 +35,5 @@ Thumbs.db
 
 # Personal notes
 NOTES.md
+# Cau hinh pgAdmin ca nhan (khong chia se trong repo)
+docker/pgadmin/servers.json

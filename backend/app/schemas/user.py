@@ -17,6 +17,15 @@ class UserRead(BaseModel):
     created_at: datetime
 
 
+# Schema tra cứu email tối thiểu: không lộ role/tổ chức của người khác
+class UserLookupRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    email: EmailStr
+
+
 # Schema yêu cầu tạo người dùng
 class UserCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)

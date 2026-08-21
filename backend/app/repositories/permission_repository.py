@@ -25,6 +25,23 @@ def list_for_document(db: Session, document_id: int) -> list[Permission]:
     )
 
 
+# Lấy quyền của một người dùng trên nhiều tài liệu (tránh N+1 khi lấy danh sách)
+def list_for_user_documents(
+    db: Session, user_id: int, document_ids: list[int]
+) -> dict[int, Permission]:
+    if not document_ids:
+        return {}
+    rows = list(
+        db.scalars(
+            select(Permission).where(
+                Permission.user_id == user_id,
+                Permission.document_id.in_(document_ids),
+            )
+        ).all()
+    )
+    return {p.document_id: p for p in rows}
+
+
 # Cấp quyền truy cập tài liệu cho người dùng
 def create(
     db: Session,

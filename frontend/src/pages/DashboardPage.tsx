@@ -6,7 +6,7 @@ import { folderApi } from "../api/folderApi";
 import { useAuth } from "../hooks/useAuth";
 import type { Document, Folder } from "../types";
 import { formatDate } from "../utils/format";
-import { fileTypeInfo, statusInfo } from "../utils/documentMeta";
+import { fileTypeInfo, processingStatusInfo, statusInfo } from "../utils/documentMeta";
 import { ROLE_LABELS } from "../utils/roles";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -19,11 +19,11 @@ export default function DashboardPage() {
 
   const load = useCallback(async () => {
     try {
-      const [docList, folderList] = await Promise.all([
-        documentApi.list(),
+      const [docResult, folderList] = await Promise.all([
+        documentApi.list(null, 1, 100),
         folderApi.list(),
       ]);
-      setDocuments(docList);
+      setDocuments(docResult.items);
       setFolders(folderList);
       setError("");
     } catch (err) {
@@ -43,7 +43,9 @@ export default function DashboardPage() {
   const total = documents.length;
   const folderCount = folders.length;
   const indexed = documents.filter((doc) =>
-    ["completed", "indexed"].includes((doc.status || "").toLowerCase())
+    ["text_extracted", "completed", "indexed"].includes(
+      (doc.processing_status || "").toLowerCase()
+    )
   ).length;
   const pending = documents.length - indexed;
   const weekAgo = Date.now() - WEEK_MS;
@@ -145,7 +147,7 @@ export default function DashboardPage() {
                 {recent.map((doc) => {
                   const file = fileTypeInfo(doc.file_name, doc.file_type);
                   const folder = folders.find((f) => f.id === doc.folder_id);
-                  const status = statusInfo(doc.status);
+                  const status = processingStatusInfo(doc.processing_status);
                   return (
                     <tr key={doc.id}>
                       <td>

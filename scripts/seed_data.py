@@ -5,25 +5,28 @@ from app.database.connection import SessionLocal
 from app.models.user import UserRole
 from app.repositories import organization_repository, user_repository
 
+DEMO_PASSWORD = "Demo@2026!"
+
 DEMO_ORGS = [
     {
         "name": "Cong ty Alpha",
-        "manager": ("Quan ly Alpha", "manager.alpha@example.com", "demo123456"),
+        "manager": ("Quan ly Alpha", "manager.alpha@example.com", DEMO_PASSWORD),
         "staff": [("Nhan vien A1", "staff.a1@example.com"), ("Nhan vien A2", "staff.a2@example.com")],
     },
     {
         "name": "Truong Dai hoc Beta",
-        "manager": ("Quan ly Beta", "manager.beta@example.com", "demo123456"),
+        "manager": ("Quan ly Beta", "manager.beta@example.com", DEMO_PASSWORD),
         "staff": [("Nhan vien B1", "staff.b1@example.com"), ("Nhan vien B2", "staff.b2@example.com")],
     },
 ]
 
-DEMO_INDIVIDUAL = ("Ca nhan Z", "individual.z@example.com", "demo123456")
+DEMO_INDIVIDUAL = ("Ca nhan Z", "individual.z@example.com", DEMO_PASSWORD)
 
 
 def seed_super_admin(db) -> None:
     email = os.getenv("SUPER_ADMIN_EMAIL", "admin@example.com")
-    password = os.getenv("SUPER_ADMIN_PASSWORD", "admin123456")
+    # Mật khẩu mặc định chỉ dùng cho môi trường demo; trong sản xuất hãy đặt biến môi trường
+    password = os.getenv("SUPER_ADMIN_PASSWORD", "Admin@2026!")
     if user_repository.get_by_email(db, email):
         print(f"super_admin '{email}' already exists, skip.")
         return
@@ -44,7 +47,7 @@ def _create_user(db, full_name, email, role, organization_id=None):
         db,
         full_name=full_name,
         email=email,
-        hashed_password=hash_password("demo123456"),
+        hashed_password=hash_password(DEMO_PASSWORD),
         role=role,
         organization_id=organization_id,
     )

@@ -24,6 +24,12 @@ class Document(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     status: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default="pending"
+    )
+    # Trạng thái phê duyệt (pending/approved/rejected) được lưu ở cột status ở trên.
+    # processing_status lưu trạng thái xử lý AI (uploaded/processing/text_extracted/failed)
+    # để hai chu trình này không đè lên nhau.
+    processing_status: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default="uploaded"
     )
 

@@ -1,4 +1,0 @@
--- Schema cơ sở dữ liệu được quản lý bằng Alembic (backend/alembic).
--- File này chỉ dùng để chuẩn bị cơ sở dữ liệu khi tạo container mới.
--- Chạy migration sau khi container khởi động:
---   cd backend && alembic upgrade head

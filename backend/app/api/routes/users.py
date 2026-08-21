@@ -7,7 +7,7 @@ from app.core.security import hash_password
 from app.database.connection import get_db
 from app.models.user import User, UserRole
 from app.repositories import user_repository
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserLookupRead, UserRead
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -28,16 +28,23 @@ def list_users(
 
 
 # Tìm người dùng theo email để chia sẻ tài liệu
-@router.get("/lookup", response_model=UserRead)
+# Người cùng tổ chức / super_admin thấy đủ thông tin; người khác tổ chức chỉ thấy id/tên/email
+@router.get("/lookup", response_model=UserLookupRead)
 def lookup_user(
     email: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    user = user_repository.get_by_email(db, email.strip())
+    user = user_repository.get_by_email(db, email.strip().lower())
     if not user:
         raise NotFoundError("Không tìm thấy người dùng với email này")
-    return user
+    if current_user.role == UserRole.SUPER_ADMIN:
+        return user
+    if current_user.organization_id is not None and user.organization_id == current_user.organization_id:
+        return user
+    if user.id == current_user.id:
+        return user
+    return UserLookupRead.model_validate(user)
 
 
 # Tạo người dùng mới, gán vai trò theo quyền của người tạo
@@ -47,7 +54,7 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
-    if user_repository.get_by_email(db, data.email):
+    if user_repository.get_by_email(db, data.email.lower().strip()):
         raise DuplicateError("Email đã được đăng ký")
 
     if current_user.role == UserRole.SUPER_ADMIN:
@@ -62,7 +69,7 @@ def create_user(
     user = user_repository.create(
         db,
         full_name=data.full_name.strip(),
-        email=data.email,
+        email=data.email.lower().strip(),
         hashed_password=hash_password(data.password),
         role=role,
         organization_id=organization_id,
