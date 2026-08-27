@@ -8,6 +8,7 @@ from app.services import storage_service
 from app.services.audit_service import AuditAction, log_document
 from app.services.extraction_service import extract_text
 from app.services.scope_service import AccessLevel, Scope, check_folder_scope
+from app.services.vector_service import index_document
 from app.utils.file_utils import (
     get_file_extension,
     is_allowed_extension,
@@ -62,28 +63,52 @@ def _validated_file(file: UploadFile):
 
 # Trích xuất văn bản từ file đã lưu và cập nhật trạng thái xử lý
 def _run_text_extraction(db, document: Document, file_path: str) -> Document:
-    """Chạy trích xuất văn bản, cập nhật processing_status, không đổi status phê duyệt."""
+    """
+    Trích xuất text rồi tự động index tài liệu vào Qdrant.
+    """
     document = document_repository.update_processing(
         db,
         document,
         processing_status="processing",
     )
+
     try:
+        # Lấy đường dẫn đầy đủ của file
         full_path = storage_service.get_full_path(file_path)
+
+        # Bước 1: Extract text / OCR
         extracted_text = extract_text(full_path)
+
+        # Lưu text vào PostgreSQL
         document = document_repository.update_processing(
             db,
             document,
             processing_status="text_extracted",
             extracted_text=extracted_text,
         )
+
+        # Bước 2 + 3 + 4:
+        # chunk → embedding → lưu Qdrant
+        index_document(document)
+
+        # Đánh dấu toàn bộ pipeline đã chạy xong
+        document = document_repository.update_processing(
+            db,
+            document,
+            processing_status="indexed",
+            extracted_text=document.extracted_text,
+        )
+
     except Exception as error:
+        # Nếu một bước bị lỗi thì giữ lại text đã extract được
         document = document_repository.update_processing(
             db,
             document,
             processing_status="failed",
+            extracted_text=document.extracted_text,
             processing_error=str(error),
         )
+
     return document
 
 
@@ -330,3 +355,4 @@ def approve_document(
     )
     document.access_level = _resolve_access_for(db, document, current_user)
     return document
+

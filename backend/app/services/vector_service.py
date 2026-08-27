@@ -1,9 +1,21 @@
 from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    FilterSelector,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
+
 
 from app.core.config import settings
+from app.models.document import Document
+from app.services.chunking_service import chunk_document
+from app.services.embedding_service import embed_text
 
 
 # Tên collection dùng để lưu các vector của tài liệu
@@ -101,3 +113,54 @@ def query(
     )
 
     return result.points
+
+
+def delete_document_points(document_id: int):
+    """Xóa các vector cũ của một document khỏi Qdrant."""
+
+    create_collection()
+    client = get_client()
+
+    client.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=FilterSelector(
+            filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="document_id",
+                        match=MatchValue(value=document_id),
+                    )
+                ]
+            )
+        ),
+        wait=True,
+    )
+
+
+def index_document(document: Document) -> int:
+    """
+    Chia tài liệu thành chunks, tạo embedding
+    và lưu tất cả chunks vào Qdrant.
+    """
+
+    # Lấy các chunk từ extracted_text của document
+    chunks = chunk_document(document)
+    # Xóa vector của version cũ trước khi lưu version hiện tại
+    delete_document_points(document.id)
+    # Xử lý từng chunk
+    for chunk in chunks:
+        # Biến nội dung chunk thành vector 384 chiều
+        vector = embed_text(chunk["text"])
+
+        # Lưu chunk + vector vào Qdrant
+        upsert(
+            document_id=chunk["document_id"],
+            document_version=chunk["document_version"],
+            chunk_index=chunk["chunk_index"],
+            text=chunk["text"],
+            vector=vector,
+        )
+
+    # Trả về số chunk đã index
+    return len(chunks)
+
