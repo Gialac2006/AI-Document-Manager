@@ -3,7 +3,6 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.schemas.audit import AuditLogRead
-from app.schemas.document import DocumentRead
 
 
 # Schema thống kê số lượng người dùng theo vai trò

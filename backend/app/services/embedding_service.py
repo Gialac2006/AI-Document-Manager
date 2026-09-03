@@ -38,3 +38,26 @@ def embed_text(text: str) -> list[float]:
 
     # Chuyển numpy array thành list Python để dễ lưu vào Qdrant
     return vector.tolist()
+
+
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    """
+    Chuyển nhiều đoạn văn bản thành vector trong một lần chạy.
+    Dùng khi cần embedding cho toàn bộ các chunk của tài liệu.
+    """
+
+    # Lọc bỏ đoạn rỗng để model không xử lý vô ích
+    valid_texts = [text for text in texts if text and text.strip()]
+    if not valid_texts:
+        return []
+
+    embedding_model = get_model()
+
+    # Encode cả danh sách một lúc, nhanh hơn gọi từng câu
+    vectors = embedding_model.encode(
+        valid_texts,
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
+
+    return [vector.tolist() for vector in vectors]

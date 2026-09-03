@@ -412,7 +412,11 @@ def ocr_image(path: str | Path) -> str:
     return _correct_text(text, lang)
 
 
-def ocr_pdf(path: str | Path) -> str:
+def ocr_pdf_pages(path: str | Path) -> list[str]:
+    """
+    OCR từng trang của PDF scan và trả về danh sách văn bản theo từng trang.
+    Dùng khi cần biết chunk nằm ở trang nào của tài liệu.
+    """
     import pymupdf
 
     pdf_path = Path(path)
@@ -439,7 +443,15 @@ def ocr_pdf(path: str | Path) -> str:
     except Exception as error:
         raise TextExtractionError(f"Không thể OCR PDF: {pdf_path.name}") from error
 
-    extracted_text = "\n\n".join(page_texts).strip()
+    return [_correct_text(page_text, lang) for page_text in page_texts]
+
+
+def ocr_pdf(path: str | Path) -> str:
+    pages = ocr_pdf_pages(path)
+
+    extracted_text = "\n\n".join(pages).strip()
     if not extracted_text:
-        raise TextExtractionError(f"Không nhận diện được chữ trong PDF scan {pdf_path.name}")
-    return _correct_text(extracted_text, lang)
+        raise TextExtractionError(
+            f"Không nhận diện được chữ trong PDF scan {Path(path).name}"
+        )
+    return extracted_text

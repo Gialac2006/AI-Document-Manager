@@ -16,6 +16,9 @@ services:
       - "8000:8000"
     volumes:
       - ./storage/uploads:/app/storage/uploads
+      # Giữ cache model HuggingFace (~470MB) qua các lần recreate container,
+      # tránh tải lại model embedding mỗi lần compose up/build mới
+      - hf-cache:/root/.cache/huggingface
     depends_on:
       - db
       - vector-db
@@ -31,6 +34,9 @@ services:
 
   vector-db:
     image: qdrant/qdrant
+    ports:
+      # Bind localhost để mở dashboard Qdrant kiểm tra vector, không lộ ra LAN
+      - "127.0.0.1:6333:6333"
     volumes:
       - vector-data:/qdrant/storage
 
@@ -54,3 +60,4 @@ volumes:
   db-data:
   vector-data:
   pgadmin-data:
+  hf-cache:

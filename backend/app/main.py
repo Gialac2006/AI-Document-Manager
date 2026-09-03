@@ -40,6 +40,18 @@ app.include_router(api_router)
 
 
 # Endpoint gốc kiểm tra API hoạt động
+@app.on_event("startup")
+def prepare_vector_db():
+    """Tạo sẵn collection trong Qdrant để lần upload đầu không phải chờ."""
+    from app.services import vector_service
+
+    try:
+        vector_service.ensure_collection()
+    except Exception:
+        # Qdrant chưa sẵn sàng cũng không chặn API khởi động
+        pass
+
+
 @app.get("/")
 def root():
     return {"message": "AI Document Manager API is running"}

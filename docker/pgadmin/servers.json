@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "AI Document Manager",
+      "Group": "Servers",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "ai_document_manager",
+      "Username": "postgres",
+      "PassFile": "/pgadmin4/pgpass",
+      "SSLMode": "prefer"
+    }
+  }
+}

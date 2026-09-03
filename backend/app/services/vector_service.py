@@ -1,166 +1,146 @@
-from uuid import NAMESPACE_URL, uuid5
+import uuid
 
-from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    FilterSelector,
-    MatchValue,
-    PointStruct,
-    VectorParams,
-)
-
+from qdrant_client import QdrantClient, models
 
 from app.core.config import settings
 from app.models.document import Document
 from app.services.chunking_service import chunk_document
-from app.services.embedding_service import embed_text
+from app.services.embedding_service import embed_text, embed_texts
 
 
-# Tên collection dùng để lưu các vector của tài liệu
+# Tên collection lưu vector các đoạn văn bản của tài liệu
 COLLECTION_NAME = "document_chunks"
 
-# Model embedding hiện tại tạo vector 384 chiều
+# Kích thước vector đầu ra của model paraphrase-multilingual-MiniLM-L12-v2
 VECTOR_SIZE = 384
 
 
-def get_client() -> QdrantClient:
-    """Kết nối tới Qdrant."""
-    return QdrantClient(url=settings.vector_db_url)
+# Ban đầu chưa có kết nối, tạo khi cần dùng lần đầu
+_client: QdrantClient | None = None
 
 
-def create_collection():
-    """Tạo collection nếu chưa có."""
+def get_client() -> QdrantClient | None:
+    global _client
+
+    if not settings.vector_db_url:
+        return None
+
+    if _client is None:
+        _client = QdrantClient(url=settings.vector_db_url, timeout=60)
+
+    return _client
+
+
+def ensure_collection() -> bool:
     client = get_client()
+    if client is None:
+        return False
 
-    # Lấy tên các collection hiện có
-    collections = client.get_collections().collections
-    collection_names = [item.name for item in collections]
-
-    # Có rồi thì không cần tạo lại
-    if COLLECTION_NAME in collection_names:
-        return
-
-    # Tạo collection để lưu vector
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(
-            size=VECTOR_SIZE,
-            distance=Distance.COSINE,
-        ),
-    )
+    if not client.collection_exists(COLLECTION_NAME):
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=models.VectorParams(
+                size=VECTOR_SIZE,
+                distance=models.Distance.COSINE,
+            ),
+        )
+    return True
 
 
-def upsert(
+def upsert_chunks(
     document_id: int,
     document_version: int,
-    chunk_index: int,
-    text: str,
-    vector: list[float],
-):
-    """Lưu một chunk và vector của nó vào Qdrant."""
+    chunks: list[dict],
+    vectors: list[list[float]],
+) -> int:
+    if not chunks or len(chunks) != len(vectors):
+        return 0
 
-    # Đảm bảo collection đã tồn tại
-    create_collection()
-
-    # Mỗi chunk có một ID cố định
-    # Lưu lại cùng chunk sẽ cập nhật thay vì tạo bản trùng
-    point_id = str(
-        uuid5(
-            NAMESPACE_URL,
-            f"{document_id}:{document_version}:{chunk_index}",
+    points = [
+        models.PointStruct(
+            id=_point_id(document_id, document_version, chunk["chunk_index"]),
+            vector=vector,
+            payload={
+                "document_id": document_id,
+                "document_version": document_version,
+                "chunk_index": chunk["chunk_index"],
+                "text": chunk["text"],
+                "page_number": chunk.get("page_number"),
+            },
         )
-    )
+        for chunk, vector in zip(chunks, vectors)
+    ]
 
     client = get_client()
+    if client is None:
+        return 0
 
-    # Lưu vector và thông tin của chunk
-    client.upsert(
-        collection_name=COLLECTION_NAME,
-        points=[
-            PointStruct(
-                id=point_id,
-                vector=vector,
-                payload={
-                    "document_id": document_id,
-                    "document_version": document_version,
-                    "chunk_index": chunk_index,
-                    "text": text,
-                },
-            )
-        ],
-    )
+    ensure_collection()
+    client.upsert(collection_name=COLLECTION_NAME, points=points)
+    return len(points)
 
 
-def query(
-    vector: list[float],
-    limit: int = 5,
-):
-    """Tìm các chunk có nội dung gần nghĩa nhất."""
-
-    # Đảm bảo collection tồn tại
-    create_collection()
-
+def delete_document_points(document_id: int) -> None:
     client = get_client()
-
-    # So sánh vector cần tìm với các vector đã lưu
-    result = client.query_points(
-        collection_name=COLLECTION_NAME,
-        query=vector,
-        limit=limit,
-        with_payload=True,
-    )
-
-    return result.points
-
-
-def delete_document_points(document_id: int):
-    """Xóa các vector cũ của một document khỏi Qdrant."""
-
-    create_collection()
-    client = get_client()
+    if client is None:
+        return
 
     client.delete(
         collection_name=COLLECTION_NAME,
-        points_selector=FilterSelector(
-            filter=Filter(
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
                 must=[
-                    FieldCondition(
+                    models.FieldCondition(
                         key="document_id",
-                        match=MatchValue(value=document_id),
+                        match=models.MatchValue(value=document_id),
                     )
                 ]
             )
         ),
-        wait=True,
     )
 
 
 def index_document(document: Document) -> int:
-    """
-    Chia tài liệu thành chunks, tạo embedding
-    và lưu tất cả chunks vào Qdrant.
-    """
+    """Chia chunk, embed batch và lưu tất cả vào Qdrant."""
+    from app.services.extraction_service import extract_text_with_pages
 
-    # Lấy các chunk từ extracted_text của document
     chunks = chunk_document(document)
-    # Xóa vector của version cũ trước khi lưu version hiện tại
+    if not chunks:
+        return 0
+
     delete_document_points(document.id)
-    # Xử lý từng chunk
-    for chunk in chunks:
-        # Biến nội dung chunk thành vector 384 chiều
-        vector = embed_text(chunk["text"])
 
-        # Lưu chunk + vector vào Qdrant
-        upsert(
-            document_id=chunk["document_id"],
-            document_version=chunk["document_version"],
-            chunk_index=chunk["chunk_index"],
-            text=chunk["text"],
-            vector=vector,
-        )
+    vectors = embed_texts([chunk["text"] for chunk in chunks])
+    return upsert_chunks(
+        document_id=document.id,
+        document_version=document.current_version,
+        chunks=chunks,
+        vectors=vectors,
+    )
 
-    # Trả về số chunk đã index
-    return len(chunks)
 
+def query(vector: list[float], *, top_k: int = 5) -> list[dict]:
+    client = get_client()
+    if client is None:
+        return []
+
+    ensure_collection()
+    hits = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=vector,
+        limit=top_k,
+        with_payload=True,
+    ).points
+
+    return [
+        {
+            "score": hit.score,
+            **(hit.payload or {}),
+        }
+        for hit in hits
+    ]
+
+
+def _point_id(document_id: int, document_version: int, chunk_index: int) -> str:
+    key = f"{document_id}-{document_version}-{chunk_index}"
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, key))

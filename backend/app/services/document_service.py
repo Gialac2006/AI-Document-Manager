@@ -4,11 +4,11 @@ from app.core.exceptions import BadRequestError, ForbiddenError
 from app.models.document import Document
 from app.models.user import User
 from app.repositories import document_repository, folder_repository
-from app.services import storage_service
+from app.services import storage_service, vector_service
 from app.services.audit_service import AuditAction, log_document
-from app.services.extraction_service import extract_text
+from app.services.chunking_service import chunk_document
+from app.services.extraction_service import extract_text_with_pages
 from app.services.scope_service import AccessLevel, Scope, check_folder_scope
-from app.services.vector_service import index_document
 from app.utils.file_utils import (
     get_file_extension,
     is_allowed_extension,
@@ -16,14 +16,12 @@ from app.utils.file_utils import (
 )
 
 
-# Xác định quyền truy cập hiệu lực của user với tài liệu
 _MISSING = object()
 
 
 def _resolve_access_for(
     db, document: Document, current_user: User, perm: object = _MISSING
 ) -> str:
-    """Trả về access_level hiệu lực (view/edit/manage) của user với document."""
     from app.models.user import UserRole
     from app.repositories.permission_repository import get as get_permission
 
@@ -40,7 +38,6 @@ def _resolve_access_for(
         and current_user.id == document.owner_id
     ):
         return "manage"
-    # Cho phép truyền sẵn permission đã load hàng loạt để tránh truy vấn N+1
     if perm is _MISSING:
         perm = get_permission(db, document.id, current_user.id)
     if perm:
@@ -50,7 +47,6 @@ def _resolve_access_for(
     return "view"
 
 
-# Kiểm tra định dạng và nội dung file tải lên
 def _validated_file(file: UploadFile):
     ext = get_file_extension(file.filename or "")
     if not is_allowed_extension(ext):
@@ -61,11 +57,23 @@ def _validated_file(file: UploadFile):
         raise BadRequestError("File không khớp với phần mở rộng (kiểm tra nội dung)")
 
 
-# Trích xuất văn bản từ file đã lưu và cập nhật trạng thái xử lý
+def _run_ai_pipeline(document: Document, page_texts: list[str] | None = None) -> int:
+    from app.services.embedding_service import embed_texts
+
+    chunks = chunk_document(document, page_texts=page_texts)
+    if not chunks:
+        return 0
+
+    vectors = embed_texts([chunk["text"] for chunk in chunks])
+    return vector_service.upsert_chunks(
+        document_id=document.id,
+        document_version=document.current_version,
+        chunks=chunks,
+        vectors=vectors,
+    )
+
+
 def _run_text_extraction(db, document: Document, file_path: str) -> Document:
-    """
-    Trích xuất text rồi tự động index tài liệu vào Qdrant.
-    """
     document = document_repository.update_processing(
         db,
         document,
@@ -73,35 +81,16 @@ def _run_text_extraction(db, document: Document, file_path: str) -> Document:
     )
 
     try:
-        # Lấy đường dẫn đầy đủ của file
         full_path = storage_service.get_full_path(file_path)
-
-        # Bước 1: Extract text / OCR
-        extracted_text = extract_text(full_path)
-
-        # Lưu text vào PostgreSQL
+        extracted_text, page_texts = extract_text_with_pages(full_path)
         document = document_repository.update_processing(
             db,
             document,
             processing_status="text_extracted",
             extracted_text=extracted_text,
         )
-
-        # Bước 2 + 3 + 4:
-        # chunk → embedding → lưu Qdrant
-        index_document(document)
-
-        # Đánh dấu toàn bộ pipeline đã chạy xong
-        document = document_repository.update_processing(
-            db,
-            document,
-            processing_status="indexed",
-            extracted_text=document.extracted_text,
-        )
-
     except Exception as error:
-        # Nếu một bước bị lỗi thì giữ lại text đã extract được
-        document = document_repository.update_processing(
+        return document_repository.update_processing(
             db,
             document,
             processing_status="failed",
@@ -109,10 +98,25 @@ def _run_text_extraction(db, document: Document, file_path: str) -> Document:
             processing_error=str(error),
         )
 
-    return document
+    try:
+        _run_ai_pipeline(document, page_texts)
+    except Exception as error:
+        return document_repository.update_processing(
+            db,
+            document,
+            processing_status="failed",
+            processing_error=f"Chunking/Embedding: {error}",
+            extracted_text=document.extracted_text,
+        )
+
+    return document_repository.update_processing(
+        db,
+        document,
+        processing_status="indexed",
+        extracted_text=document.extracted_text,
+    )
 
 
-# Tạo tài liệu mới, lưu file và trích xuất nội dung văn bản
 def create_document(
     db,
     *,
@@ -143,7 +147,6 @@ def create_document(
         title = file.filename.rsplit(".", 1)[0] or "Chưa có tiêu đề"
 
     file_path = storage_service.save_file(file, owner_id=current_user.id)
-    # Staff upload → chờ duyệt; manager/super_admin/individual → đã duyệt ngay
     initial_status = (
         "pending"
         if current_user.role == "staff"
@@ -170,7 +173,6 @@ def create_document(
         created_by=current_user.id,
     )
 
-    # Xử lý AI: trích xuất text, không đè trạng thái phê duyệt
     document = _run_text_extraction(db, document, file_path)
 
     log_document(
@@ -184,7 +186,6 @@ def create_document(
     return document
 
 
-# Tải lên phiên bản mới cho tài liệu
 def upload_new_version(
     db, *, document: Document, file: UploadFile, current_user: User
 ) -> Document:
@@ -209,12 +210,10 @@ def upload_new_version(
         file_type=ext,
         current_version=version,
     )
-    # Nội dung mới do staff đưa lên phải được duyệt lại
     if current_user.role == "staff" and document.status != "pending":
         document.status = "pending"
         db.commit()
         db.refresh(document)
-    # Phiên bản mới có nội dung khác → trích xuất lại văn bản
     document = _run_text_extraction(db, document, file_path)
     log_document(
         db,
@@ -227,7 +226,6 @@ def upload_new_version(
     return document
 
 
-# Lấy tài liệu theo id và kiểm tra quyền truy cập
 def get_document(
     db, *, document_id: int, current_user: User, required: str = AccessLevel.VIEW
 ) -> Document:
@@ -245,7 +243,6 @@ def get_document(
     return document
 
 
-# Lấy danh sách tài liệu trong phạm vi quyền của user (có phân trang)
 def list_documents(
     db,
     *,
@@ -258,7 +255,6 @@ def list_documents(
     from app.repositories.permission_repository import list_for_user_documents
 
     scope = Scope(current_user)
-    # Chỉ staff/individual cần lọc theo quyền chia sẻ; manager xem mọi thứ trong tổ chức
     needs_visibility_filter = current_user.role in (
         UserRole.STAFF,
         UserRole.INDIVIDUAL,
@@ -272,7 +268,6 @@ def list_documents(
         offset=(page - 1) * page_size,
         limit=page_size,
     )
-    # Load permission hàng loạt để tránh truy vấn N+1
     perm_map = (
         list_for_user_documents(db, current_user.id, [d.id for d in documents])
         if documents
@@ -285,7 +280,6 @@ def list_documents(
     return documents, total
 
 
-# Cập nhật tiêu đề và thư mục của tài liệu
 def update_document(
     db, *, document: Document, title: str, folder_id: int | None, current_user: User
 ) -> Document:
@@ -311,7 +305,6 @@ def update_document(
     return document
 
 
-# Xóa tài liệu và file lưu trữ
 def delete_document(db, *, document: Document, current_user: User) -> None:
     log_document(
         db,
@@ -321,22 +314,24 @@ def delete_document(db, *, document: Document, current_user: User) -> None:
         details=document.title,
     )
     storage_service.delete_file(document.file_path)
+    try:
+        vector_service.delete_document_points(document.id)
+    except Exception:
+        pass
     document_repository.delete(db, document)
 
 
-# Phê duyệt hoặc từ chối tài liệu đang chờ duyệt
 def approve_document(
     db, *, document: Document, decision: str, reason: str | None, current_user: User
 ) -> Document:
     from app.repositories import approval_repository
 
-    # Chỉ phê duyệt được tài liệu đang ở trạng thái chờ duyệt
     if document.status != "pending":
         raise BadRequestError(
             "Chỉ tài liệu đang chờ duyệt mới có thể phê duyệt hoặc từ chối"
         )
 
-    approval = approval_repository.create(
+    approval_repository.create(
         db,
         document_id=document.id,
         reviewer_id=current_user.id,
@@ -355,4 +350,3 @@ def approve_document(
     )
     document.access_level = _resolve_access_for(db, document, current_user)
     return document
-
