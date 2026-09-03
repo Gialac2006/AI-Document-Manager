@@ -29,7 +29,7 @@ def semantic_search(
     candidate_limit = max(limit * 5, 20)
 
     # Bước 2: tìm các vector gần nghĩa nhất trong Qdrant
-    candidates = query(vector, limit=candidate_limit)
+    candidates = query(vector, top_k=candidate_limit)
 
     results = []
 

@@ -35,6 +35,18 @@ def extract_text(file_path: str | Path) -> str:
     - DOCX/XLSX/XLS/PPTX: đọc bằng python-docx / openpyxl / xlrd / python-pptx.
     - DOC/PPT: chuyển đổi sang DOCX/PPTX bằng LibreOffice headless rồi đọc lại.
     """
+    extracted_text, _ = extract_text_with_pages(file_path)
+    return extracted_text
+
+
+def extract_text_with_pages(file_path: str | Path) -> tuple[str, list[str] | None]:
+    """
+    Đọc tài liệu và trả về (văn bản đầy đủ, danh sách văn bản theo từng trang).
+
+    pages là None với những định dạng không có khái niệm trang thật
+    (txt, docx, xlsx...). PDF và ảnh OCR luôn trả về danh sách trang,
+    giúp bước chunking gắn số trang cho từng chunk.
+    """
 
     # Chuyển đường dẫn dạng chuỗi thành đối tượng Path để kiểm tra file dễ hơn
     path = Path(file_path)
@@ -45,31 +57,32 @@ def extract_text(file_path: str | Path) -> str:
 
     suffix = path.suffix.lower()
 
-    # File text thuần: đọc trực tiếp nội dung
+    # File text thuần: đọc trực tiếp nội dung — không có khái niệm trang
     if suffix in TEXT_EXTENSIONS:
-        return _read_text_file(path)
+        return _read_text_file(path), None
 
-    # File ảnh: chuyển ảnh thành văn bản bằng OCR
+    # File ảnh: một ảnh tương đương một trang
     if suffix in IMAGE_EXTENSIONS:
         from app.services.ocr_service import ocr_image
 
-        return ocr_image(path)
+        page_text = ocr_image(path)
+        return page_text, [page_text]
 
     # File Word (.docx): đọc bằng python-docx
     if suffix in WORD_EXTENSIONS:
-        return _extract_docx(path)
+        return _extract_docx(path), None
 
     # File Excel (.xlsx/.xls): đọc bằng openpyxl hoặc xlrd
     if suffix in EXCEL_EXTENSIONS:
-        return _extract_excel(path)
+        return _extract_excel(path), None
 
     # File PowerPoint (.pptx): đọc bằng python-pptx
     if suffix in POWERPOINT_EXTENSIONS:
-        return _extract_pptx(path)
+        return _extract_pptx(path), None
 
     # File Office đời cũ (.doc/.ppt): chuyển đổi qua LibreOffice rồi đọc lại
     if suffix in LEGACY_OFFICE_MAP:
-        return _extract_legacy_office(path)
+        return _extract_legacy_office(path), None
 
     # Hiện tại pipeline mới hỗ trợ trích xuất trực tiếp từ PDF
     if suffix != ".pdf":
@@ -105,16 +118,21 @@ def extract_text(file_path: str | Path) -> str:
             f"Không thể đọc nội dung PDF: {path.name}"
         ) from error
 
-    # QUAN TRỌNG: Ghép văn bản của các trang thành một nội dung hoàn chỉnh
+    # Ghép văn bản của các trang thành một nội dung hoàn chỉnh
     extracted_text = "\n\n".join(page_texts).strip()
 
     # Nếu PDF không lấy được chữ, nhiều khả năng đây là PDF scan → chuyển qua OCR
     if not extracted_text:
-        from app.services.ocr_service import ocr_pdf
+        from app.services.ocr_service import ocr_pdf_pages
 
-        return ocr_pdf(path)
+        page_texts = ocr_pdf_pages(path)
+        extracted_text = "\n\n".join(page_texts).strip()
+        if not page_texts:
+            raise TextExtractionError(
+                f"Không nhận diện được chữ trong PDF scan {path.name}"
+            )
 
-    return extracted_text
+    return extracted_text, page_texts
 
 
 def _read_text_file(path: Path) -> str:
@@ -319,7 +337,7 @@ def _convert_with_libreoffice(path: Path, target_ext: str) -> Path:
     try:
         # HOME riêng trong thư mục tạm: LibreOffice cần nơi ghi profile khi chạy headless
         env = {**os.environ, "HOME": tmp_dir}
-        result = subprocess.run(
+        subprocess.run(
             [
                 soffice,
                 "--headless",
