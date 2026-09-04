@@ -21,3 +21,4 @@ email-validator==2.3.0
 python-multipart==0.0.32
 sentence-transformers==6.0.0
 qdrant-client==1.19.0
+google-genai==2.22.0
