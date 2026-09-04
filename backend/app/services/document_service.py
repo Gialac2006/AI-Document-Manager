@@ -65,6 +65,11 @@ def _run_ai_pipeline(document: Document, page_texts: list[str] | None = None) ->
         return 0
 
     vectors = embed_texts([chunk["text"] for chunk in chunks])
+
+    # Xóa vector của version cũ trước khi lưu version hiện tại
+    # Nếu là document mới thì không có gì để xóa
+    vector_service.delete_document_points(document.id)
+
     return vector_service.upsert_chunks(
         document_id=document.id,
         document_version=document.current_version,
