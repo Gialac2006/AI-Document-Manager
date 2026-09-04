@@ -34,14 +34,15 @@ def semantic_search(
     results = []
 
     for point in candidates:
-        payload = point.payload or {}
-        document_id = payload.get("document_id")
+        # vector_service.query() bây giờ trả về dict
+        # nên đọc dữ liệu bằng point.get(...)
+        document_id = point.get("document_id")
 
         if document_id is None:
             continue
 
         try:
-            # Bước 3: kiểm tra user có quyền xem document không
+            # Kiểm tra user có quyền xem document không
             document = document_service.get_document(
                 db,
                 document_id=document_id,
@@ -51,15 +52,16 @@ def semantic_search(
             # Không có quyền hoặc document đã bị xóa → bỏ qua
             continue
 
-        # Bước 4: tạo kết quả trả về
+        # Tạo kết quả trả về cho frontend
         results.append(
             {
                 "document_id": document.id,
                 "document_title": document.title,
-                "document_version": payload.get("document_version"),
-                "chunk_index": payload.get("chunk_index"),
-                "text": payload.get("text", ""),
-                "score": float(point.score),
+                "document_version": point.get("document_version"),
+                "chunk_index": point.get("chunk_index"),
+                "text": point.get("text", ""),
+                "score": float(point.get("score", 0)),
+                "page_number": point.get("page_number"),
             }
         )
 
@@ -68,3 +70,4 @@ def semantic_search(
             break
 
     return results
+
