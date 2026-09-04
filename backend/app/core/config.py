@@ -35,6 +35,10 @@ class Settings:
     ]
     vector_db_url: str = os.getenv("VECTOR_DB_URL", "")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
+
+    # Model Gemini dùng để trả lời câu hỏi RAG
+    # Có thể đổi trong .env mà không cần sửa code
+    llm_model: str = os.getenv("LLM_MODEL", "gemini-3.6-flash")
     storage_path: str = os.getenv("STORAGE_PATH", "storage/uploads")
     max_upload_size: int = int(
         os.getenv("MAX_UPLOAD_SIZE", str(100 * 1024 * 1024))
