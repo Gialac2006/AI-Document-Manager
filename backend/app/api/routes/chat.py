@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.api.dependencies import get_current_user
 from app.database.connection import get_db
 from app.models.chat import Chat
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 class ChatRequest(BaseModel):
     question: str
+    chat_id: int | None = None
 
 
 @router.post("")
@@ -27,15 +29,27 @@ def ask_chat(
     Nhận câu hỏi, gọi RAG và lưu lịch sử chat.
     """
 
-    # 1. Tạo một cuộc chat mới
-    chat = Chat(
-        user_id=current_user.id,
-        organization_id=current_user.organization_id,
-        title=data.question[:100],
-    )
+        # Nếu frontend gửi chat_id thì dùng lại cuộc chat cũ
+    if data.chat_id is not None:
+        chat = db.get(Chat, data.chat_id)
 
-    db.add(chat)
-    db.flush()
+        if not chat:
+            raise NotFoundError("Không tìm thấy cuộc chat")
+
+        if chat.user_id != current_user.id:
+            raise ForbiddenError("Bạn không có quyền truy cập cuộc chat này")
+
+    # Không có chat_id thì tạo chat mới
+    else:
+        chat = Chat(
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
+            title=data.question[:100],
+        )
+
+        db.add(chat)
+        db.flush()
+
 
     # 2. Lưu câu hỏi của user
     user_message = ChatMessage(
