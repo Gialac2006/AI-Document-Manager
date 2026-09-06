@@ -2,7 +2,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app.api.routes import admin, audit, auth, documents, folders, search, users
+from app.api.routes import admin, audit, auth, chat, documents, folders, search, users
 from app.core.config import settings
 from app.database.connection import SessionLocal
 from app import models  # noqa: F401
@@ -36,6 +36,7 @@ api_router.include_router(folders.router)
 api_router.include_router(documents.router)
 api_router.include_router(audit.router)
 api_router.include_router(search.router)
+api_router.include_router(chat.router)
 app.include_router(api_router)
 
 
