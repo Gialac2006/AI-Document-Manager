@@ -39,8 +39,22 @@ export const chatApi = {
     });
   },
 
+  // Lấy danh sách các cuộc chat của user
+list(): Promise<ChatSummary[]> {
+  return request<ChatSummary[]>("/chat");
+},
+
   // Lấy lịch sử của một cuộc chat
   history(chatId: number): Promise<ChatHistory> {
     return request<ChatHistory>(`/chat/${chatId}`);
   },
 };
+
+
+  // Thông tin ngắn gọn của một cuộc chat
+export interface ChatSummary {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}

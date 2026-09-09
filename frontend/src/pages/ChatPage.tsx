@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { chatApi } from "../api/chatApi";
+import type { ChatSummary } from "../api/chatApi";
 
 interface Message {
   role: "user" | "assistant";
@@ -11,7 +12,49 @@ export default function ChatPage() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatId, setChatId] = useState<number | null>(null);
+  // Danh sách các cuộc chat cũ của user
+  const [chats, setChats] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Khi mở trang chat, lấy danh sách các cuộc chat đã lưu
+  useEffect(() => {
+    const loadChats = async () => {
+      try {
+        const result = await chatApi.list();
+        setChats(result);
+      } catch (error) {
+        console.error("Không thể tải danh sách chat:", error);
+      }
+    };
+
+    loadChats();
+  }, []);
+
+
+    // Mở lại một cuộc chat cũ
+  const handleOpenChat = async (id: number) => {
+    try {
+      setLoading(true);
+
+      const history = await chatApi.history(id);
+
+      // Ghi nhớ chat đang mở
+      setChatId(history.id);
+
+      // Hiển thị lại toàn bộ tin nhắn cũ
+      setMessages(
+        history.messages.map((item) => ({
+          role: item.role === "user" ? "user" : "assistant",
+          content: item.content,
+        }))
+      );
+    } catch (error) {
+      console.error("Không thể mở lịch sử chat:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,6 +121,29 @@ export default function ChatPage() {
           </p>
         </div>
       </div>
+
+<div className="chat-history">
+  <h3>Lịch sử chat</h3>
+
+  <div className="chat-history-list">
+    {chats.length === 0 ? (
+      <p>Chưa có cuộc chat nào.</p>
+    ) : (
+      chats.map((chat) => (
+        <button
+          key={chat.id}
+          type="button"
+          className={`chat-history-item ${
+            chatId === chat.id ? "active" : ""
+          }`}
+          onClick={() => handleOpenChat(chat.id)}
+        >
+          {chat.title}
+        </button>
+      ))
+    )}
+  </div>
+</div>
 
       <div className="chat-window">
         {messages.length === 0 ? (
