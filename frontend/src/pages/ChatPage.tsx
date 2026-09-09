@@ -1,13 +1,71 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { chatApi } from "../api/chatApi";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
-  const [messages] = useState<{ role: string; content: string }[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatId, setChatId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const question = message.trim();
+
+    if (!question || loading) {
+      return;
+    }
+
+    // Hiển thị câu hỏi của user ngay trên màn hình
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: question,
+      },
+    ]);
+
     setMessage("");
+    setLoading(true);
+
+    try {
+      // Gửi câu hỏi sang backend
+      const result = await chatApi.ask({
+        question,
+        ...(chatId !== null ? { chat_id: chatId } : {}),
+      });
+
+      // Lưu chat_id để câu tiếp theo tiếp tục đúng cuộc chat
+      setChatId(result.chat_id);
+
+      // Hiển thị câu trả lời của AI
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: result.answer,
+        },
+      ]);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Không thể gửi câu hỏi";
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `Lỗi: ${errorMessage}`,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,20 +83,20 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           <div className="chat-empty">
             <span className="empty-icon">💬</span>
-            <p>
-              Chào bạn! Hãy đặt câu hỏi về tài liệu của bạn, ví dụ:{" "}
-              <em>"Tóm tắt Q3 Financial Report"</em>.
-            </p>
-            <p className="muted" style={{ fontSize: "12.5px" }}>
-              Trò chuyện với tài liệu sẽ hoàn thiện ở Giai đoạn 4 (RAG).
-            </p>
+            <p>Hãy đặt câu hỏi về tài liệu của bạn.</p>
           </div>
         ) : (
-          messages.map((m, index) => (
-            <div key={index} className={`chat-bubble ${m.role}`}>
-              {m.content}
+          messages.map((item, index) => (
+            <div key={index} className={`chat-bubble ${item.role}`}>
+              {item.content}
             </div>
           ))
+        )}
+
+        {loading && (
+          <div className="chat-bubble assistant">
+            AI đang trả lời...
+          </div>
         )}
       </div>
 
@@ -47,9 +105,15 @@ export default function ChatPage() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Hỏi AI về tài liệu của bạn..."
+          disabled={loading}
         />
-        <button type="submit" className="secondary-button" disabled title="Sắp ra mắt">
-          Gửi
+
+        <button
+          type="submit"
+          className="secondary-button"
+          disabled={loading || !message.trim()}
+        >
+          {loading ? "Đang gửi..." : "Gửi"}
         </button>
       </form>
     </div>
