@@ -19,7 +19,6 @@ class ChatRequest(BaseModel):
     chat_id: int | None = None
 
 
-
 @router.get("")
 def get_chats(
     db: Session = Depends(get_db),
@@ -126,6 +125,24 @@ def ask_chat(
         db.flush()
 
 
+        # Lấy tối đa 6 tin nhắn gần nhất để AI hiểu ngữ cảnh
+    history_messages = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.chat_id == chat.id)
+        .order_by(ChatMessage.id.desc())
+        .limit(6)
+        .all()
+    )
+
+    # Đảo lại để đúng thứ tự cũ → mới
+    history_messages.reverse()
+
+    conversation_history = "\n".join(
+        f"{message.role}: {message.content}"
+        for message in history_messages
+    )
+
+
     # 2. Lưu câu hỏi của user
     user_message = ChatMessage(
         chat_id=chat.id,
@@ -140,6 +157,7 @@ def ask_chat(
         db,
         question=data.question,
         current_user=current_user,
+        conversation_history=conversation_history,
     )
 
     # 4. Lưu câu trả lời của AI
@@ -148,6 +166,7 @@ def ask_chat(
         role="assistant",
         content=response,
     )
+
 
     db.add(assistant_message)
 

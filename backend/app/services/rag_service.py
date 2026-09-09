@@ -11,6 +11,7 @@ def build_context(
     question: str,
     current_user: User,
     limit: int = 5,
+    conversation_history: str = "",
 ) -> str:
     """
     Tìm các đoạn tài liệu liên quan đến câu hỏi
@@ -18,9 +19,19 @@ def build_context(
     """
 
     # dùng Semantic Search để lấy các chunk gần nghĩa nhất
+        # Nếu có lịch sử chat, ghép với câu hỏi mới để Semantic Search
+    # hiểu các câu nối tiếp như "nó", "cái đó", "vậy còn..."
+    search_query = question
+
+    if conversation_history.strip():
+        search_query = (
+            f"{conversation_history}\n"
+            f"Câu hỏi mới: {question}"
+        )
+    
     results = semantic_search(
         db,
-        query_text=question,
+        query_text=search_query,
         current_user=current_user,
         limit=limit,
     )
@@ -57,6 +68,7 @@ def answer(
     question: str,
     current_user: User,
     limit: int = 5,
+    conversation_history: str = "",
 ) -> str:
     """
     Trả lời câu hỏi dựa trên nội dung tài liệu mà user có quyền xem.
@@ -72,6 +84,7 @@ def answer(
         question=question,
         current_user=current_user,
         limit=limit,
+        conversation_history=conversation_history,
     )
 
     # Không có tài liệu liên quan thì không gọi LLM
@@ -87,10 +100,13 @@ Không tự thêm thông tin nếu tài liệu không cung cấp.
 Nếu context không đủ để trả lời, hãy nói rõ là không đủ thông tin.
 Khi phù hợp, hãy ghi nguồn theo dạng [Nguồn 1], [Nguồn 2].
 
-CONTEXT:
+LỊCH SỬ HỘI THOẠI:
+{conversation_history or "Chưa có lịch sử hội thoại."}
+
+CONTEXT TÀI LIỆU:
 {context}
 
-CÂU HỎI:
+CÂU HỎI MỚI:
 {question}
 """
 
