@@ -1,9 +1,12 @@
+import time
+
 from google import genai
+from google.genai.errors import ServerError
 
 from app.core.config import settings
 from app.models.user import User
 from app.services.search_service import semantic_search
-
+from app.core.exceptions import ServiceUnavailableError
 
 def build_context(
     db,
@@ -113,10 +116,22 @@ CÂU HỎI MỚI:
     # Bước 3: gửi context + câu hỏi cho Gemini
     client = genai.Client(api_key=settings.llm_api_key)
 
-    response = client.models.generate_content(
-        model=settings.llm_model,
-        contents=prompt,
-    )
+    # Thử gọi Gemini tối đa 3 lần nếu server đang bận
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model=settings.llm_model,
+                contents=prompt,
+            )
 
-    # Bước 4: lấy câu trả lời dạng text
-    return response.text or "Gemini không trả về nội dung."
+            return response.text or "Gemini không trả về nội dung."
+
+        except ServerError:
+            # Đã thử đủ 3 lần nhưng Gemini vẫn lỗi
+            if attempt == 2:
+                raise ServiceUnavailableError(
+                    "Gemini đang bận, vui lòng thử lại sau."
+                )
+
+            # Chờ 2 giây rồi thử lại
+            time.sleep(2)        

@@ -43,3 +43,10 @@ class TooManyRequestsError(HTTPException):
             detail=detail,
             headers={"Retry-After": "60"},
         )
+# Dịch vụ bên ngoài tạm thời không khả dụng (503)
+class ServiceUnavailableError(HTTPException):
+    def __init__(self, detail: str = "Dịch vụ tạm thời không khả dụng"):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+        )
