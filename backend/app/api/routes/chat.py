@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,6 +11,32 @@ from app.models.chat import Chat
 from app.models.chat_message import ChatMessage
 from app.models.user import User
 from app.services.rag_service import answer
+
+def clean_message_for_history(content: str) -> str:
+    """
+    Làm sạch câu trả lời cũ trước khi đưa lại cho AI.
+    Không cho thông tin nguồn của lượt trước làm nhiễu lượt sau.
+    """
+
+    # Bỏ phần "Chi tiết nguồn" do backend đã thêm
+    content = re.split(
+        r"\n\s*#{0,3}\s*Chi tiết nguồn\s*:?\s*\n",
+        content,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
+
+    # Bỏ citation như:
+    # [Nguồn 1]
+    # [Nguồn 1, Nguồn 3]
+    content = re.sub(
+        r"\[Nguồn\s+\d+(?:\s*,\s*Nguồn\s+\d+)*\]",
+        "",
+        content,
+        flags=re.IGNORECASE,
+    )
+
+    return content.strip()
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -138,8 +166,8 @@ def ask_chat(
     history_messages.reverse()
 
     conversation_history = "\n".join(
-        f"{message.role}: {message.content}"
-        for message in history_messages
+    f"{message.role}: {clean_message_for_history(message.content)}"
+    for message in history_messages
     )
 
 

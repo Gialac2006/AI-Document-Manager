@@ -1,6 +1,5 @@
 import time
 import re
-import time
 
 from google import genai
 from google.genai.errors import ServerError
@@ -10,12 +9,14 @@ from app.models.user import User
 from app.services.search_service import semantic_search
 from app.core.exceptions import ServiceUnavailableError
 
+#------------------------------------------------
+
 def build_context(
     db,
     *,
     question: str,
     current_user: User,
-    limit: int = 5,
+    limit: int = 8,
     conversation_history: str = "",
 ) -> tuple[str, list[str]]:
     """
@@ -26,13 +27,31 @@ def build_context(
     # dùng Semantic Search để lấy các chunk gần nghĩa nhất
         # Nếu có lịch sử chat, ghép với câu hỏi mới để Semantic Search
     # hiểu các câu nối tiếp như "nó", "cái đó", "vậy còn..."
+    # Mặc định chỉ tìm bằng câu hỏi hiện tại
     search_query = question
 
-    if conversation_history.strip():
-        search_query = (
-            f"{conversation_history}\n"
-            f"Câu hỏi mới: {question}"
+    # Mặc định chỉ search bằng câu hỏi hiện tại.
+    # Câu hỏi tự đầy đủ không được để history làm nhiễu retrieval.
+    search_query = question
+
+    # Chỉ thêm câu trước nếu câu mới thật sự là follow-up
+    if (
+        conversation_history.strip()
+        and _needs_previous_context(question)
+    ):
+        previous_user_questions = re.findall(
+            r"^user:\s*(.+)$",
+            conversation_history,
+            flags=re.MULTILINE,
         )
+
+        if previous_user_questions:
+            last_user_question = previous_user_questions[-1]
+
+            search_query = (
+                f"Câu hỏi trước: {last_user_question}\n"
+                f"Câu hỏi mới: {question}"
+            )
     
     results = semantic_search(
         db,
@@ -73,13 +92,51 @@ def build_context(
     # nối các chunk lại thành một chuỗi lớn
     return "\n\n".join(context_parts), sources
 
+#------------------------------------------------
+
+def _needs_previous_context(question: str) -> bool:
+    """
+    Kiểm tra câu hỏi mới có phụ thuộc vào câu trước hay không.
+
+    Ví dụ cần context:
+    - "Ông ấy là ai?"
+    - "Còn bà ấy thì sao?"
+    - "Nhược điểm của nó là gì?"
+    """
+
+    text = question.strip().lower()
+
+    follow_up_markers = (
+        "ông ấy",
+        "bà ấy",
+        "anh ấy",
+        "cô ấy",
+        "người đó",
+        "nhân vật đó",
+        "nó ",
+        "nó?",
+        "nó là",
+        "cái đó",
+        "việc đó",
+        "điều đó",
+        "vậy ",
+        "thế ",
+        "còn ",
+    )
+
+    return any(
+        marker in text
+        for marker in follow_up_markers
+    )
+
+#------------------------------------------------
 
 def answer(
     db,
     *,
     question: str,
     current_user: User,
-    limit: int = 5,
+    limit: int = 8,
     conversation_history: str = "",
 ) -> tuple[str, list[str]]:
     """
@@ -110,7 +167,23 @@ Bạn là trợ lý hỏi đáp tài liệu.
 Chỉ trả lời dựa trên phần CONTEXT bên dưới.
 Không tự thêm thông tin nếu tài liệu không cung cấp.
 Nếu context không đủ để trả lời, hãy nói rõ là không đủ thông tin.
-Khi phù hợp, hãy ghi nguồn theo dạng [Nguồn 1], [Nguồn 2].
+Khi sử dụng thông tin từ context, hãy trích dẫn ngay trong câu
+theo dạng [Nguồn 1], [Nguồn 2].
+
+Không tự tạo mục "Chi tiết nguồn".
+Backend sẽ tự hiển thị chi tiết nguồn sau câu trả lời.
+
+Nếu context không đủ để trả lời:
+- Hãy nói rõ là không đủ thông tin.
+- Không trích dẫn [Nguồn ...].
+- Không tự suy đoán.
+
+Nếu câu hỏi hỏi về đầu hoặc cuối tài liệu và CONTEXT đã chứa
+các trang đầu/cuối liên tiếp, hãy sử dụng các trang đó để trả lời trực tiếp.
+
+Nếu CONTEXT có từ "HẾT" ở phần cuối tài liệu,
+có thể xem đó là phần kết thúc của tài liệu.
+Không cần nói rằng "không rõ đây có phải cuối truyện hay không".
 
 LỊCH SỬ HỘI THOẠI:
 {conversation_history or "Chưa có lịch sử hội thoại."}
@@ -134,6 +207,23 @@ CÂU HỎI MỚI:
             )
 
             answer_text = response.text or "Gemini không trả về nội dung."
+            # Gemini đôi khi tự tạo "Chi tiết nguồn".
+            # Xóa phần đó vì backend sẽ tự tạo nguồn bên dưới.
+            answer_text = re.split(
+                r"\n\s*#{0,3}\s*Chi tiết nguồn\s*:?\s*\n",
+                answer_text,
+                maxsplit=1,
+                flags=re.IGNORECASE,
+            )[0].strip()
+
+            # Xóa dòng chỉ chứa citation đứng riêng như:
+            # [Nguồn 4]
+            # [Nguồn 1], [Nguồn 2]
+            answer_text = re.sub(
+                r"(?:\n\s*\[Nguồn \d+\](?:\s*,\s*\[Nguồn \d+\])*\s*)+$",
+                "",
+                answer_text,
+            ).strip()
 
             # Tìm các số nguồn mà Gemini thật sự đã dẫn trong câu trả lời
             # Hỗ trợ cả [Nguồn 1] và [Nguồn 1, Nguồn 3]
@@ -157,9 +247,10 @@ CÂU HỎI MỚI:
                 if index in used_source_numbers
             ]
 
-            # Nếu Gemini quên ghi [Nguồn ...] thì vẫn hiển thị các nguồn RAG đã tìm được
+            # Nếu AI không dùng nguồn nào thì không hiển thị nguồn.
+            # Tránh trường hợp "không đủ thông tin" nhưng vẫn liệt kê 5 nguồn.
             if not used_sources:
-                used_sources = sources
+                return answer_text
 
             sources_text = "\n".join(
                 f"- {source}"
