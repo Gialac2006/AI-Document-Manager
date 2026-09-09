@@ -1,4 +1,6 @@
 import time
+import re
+import time
 
 from google import genai
 from google.genai.errors import ServerError
@@ -15,7 +17,7 @@ def build_context(
     current_user: User,
     limit: int = 5,
     conversation_history: str = "",
-) -> str:
+) -> tuple[str, list[str]]:
     """
     Tìm các đoạn tài liệu liên quan đến câu hỏi
     rồi ghép lại thành context cho LLM ở bước sau.
@@ -41,9 +43,10 @@ def build_context(
 
     # Không tìm thấy tài liệu liên quan
     if not results:
-        return ""
+        return "", []
 
     context_parts = []
+    sources = []
 
     # ghép từng chunk thành context
     for index, result in enumerate(results, start=1):
@@ -60,9 +63,15 @@ def build_context(
         context_parts.append(
             f"[Nguồn {index}] {source}\n{text}"
         )
+        # Nội dung nguồn dùng để hiển thị cho user
+        source_display = f"Nguồn {index}: {title}"
 
+        if page_number is not None:
+            source_display += f" — Trang {page_number}"
+
+        sources.append(source_display)
     # nối các chunk lại thành một chuỗi lớn
-    return "\n\n".join(context_parts)
+    return "\n\n".join(context_parts), sources
 
 
 def answer(
@@ -72,7 +81,7 @@ def answer(
     current_user: User,
     limit: int = 5,
     conversation_history: str = "",
-) -> str:
+) -> tuple[str, list[str]]:
     """
     Trả lời câu hỏi dựa trên nội dung tài liệu mà user có quyền xem.
     """
@@ -82,7 +91,7 @@ def answer(
         raise RuntimeError("Chưa cấu hình LLM_API_KEY")
 
     # Bước 1: tìm và ghép các đoạn tài liệu liên quan
-    context = build_context(
+    context, sources = build_context(
         db,
         question=question,
         current_user=current_user,
@@ -124,7 +133,44 @@ CÂU HỎI MỚI:
                 contents=prompt,
             )
 
-            return response.text or "Gemini không trả về nội dung."
+            answer_text = response.text or "Gemini không trả về nội dung."
+
+            # Tìm các số nguồn mà Gemini thật sự đã dẫn trong câu trả lời
+            # Hỗ trợ cả [Nguồn 1] và [Nguồn 1, Nguồn 3]
+            citation_groups = re.findall(
+                r"\[Nguồn ([^\]]+)\]",
+                answer_text,
+            )
+
+            used_source_numbers = set()
+
+            for group in citation_groups:
+                numbers = re.findall(r"\d+", group)
+
+                for number in numbers:
+                    used_source_numbers.add(int(number))
+
+            # Chỉ lấy những nguồn Gemini thật sự đã dùng
+            used_sources = [
+                source
+                for index, source in enumerate(sources, start=1)
+                if index in used_source_numbers
+            ]
+
+            # Nếu Gemini quên ghi [Nguồn ...] thì vẫn hiển thị các nguồn RAG đã tìm được
+            if not used_sources:
+                used_sources = sources
+
+            sources_text = "\n".join(
+                f"- {source}"
+                for source in used_sources
+            )
+
+            return (
+                f"{answer_text}\n\n"
+                f"### Chi tiết nguồn\n"
+                f"{sources_text}"
+            )
 
         except ServerError:
             # Đã thử đủ 3 lần nhưng Gemini vẫn lỗi
