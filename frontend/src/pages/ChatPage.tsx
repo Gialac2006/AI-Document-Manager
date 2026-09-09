@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import ReactMarkdown from "react-markdown";
+
 import { chatApi } from "../api/chatApi";
 import type { ChatSummary } from "../api/chatApi";
+
 
 interface Message {
   role: "user" | "assistant";
@@ -154,7 +157,13 @@ export default function ChatPage() {
         ) : (
           messages.map((item, index) => (
             <div key={index} className={`chat-bubble ${item.role}`}>
-              {item.content}
+              {item.role === "assistant" ? (
+                // Câu trả lời AI có thể chứa Markdown
+                <ReactMarkdown>{item.content}</ReactMarkdown>
+              ) : (
+                // Tin nhắn của user hiển thị bình thường
+                item.content
+              )}
             </div>
           ))
         )}
