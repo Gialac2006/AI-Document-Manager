@@ -2819,3 +2819,64 @@ body {
   background: var(--color-primary-light);
   border-color: var(--color-primary);
 }
+/* ===== Nội dung Markdown trong câu trả lời AI ===== */
+
+.chat-bubble.assistant p {
+  margin: 0 0 10px;
+}
+
+.chat-bubble.assistant p:last-child {
+  margin-bottom: 0;
+}
+
+/* Danh sách bullet và danh sách số */
+.chat-bubble.assistant ul,
+.chat-bubble.assistant ol {
+  margin: 8px 0 10px;
+  padding-left: 22px;
+}
+
+.chat-bubble.assistant li {
+  margin-bottom: 5px;
+}
+
+/* Tiêu đề do AI trả về */
+.chat-bubble.assistant h1,
+.chat-bubble.assistant h2,
+.chat-bubble.assistant h3 {
+  margin: 14px 0 8px;
+  color: var(--color-heading);
+  line-height: 1.35;
+}
+
+.chat-bubble.assistant h1 {
+  font-size: 18px;
+}
+
+.chat-bubble.assistant h2 {
+  font-size: 16px;
+}
+
+.chat-bubble.assistant h3 {
+  font-size: 15px;
+}
+
+/* Tiêu đề đầu tiên không cần khoảng trống phía trên */
+.chat-bubble.assistant h1:first-child,
+.chat-bubble.assistant h2:first-child,
+.chat-bubble.assistant h3:first-child {
+  margin-top: 0;
+}
+
+.chat-bubble.assistant strong {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+/* Code ngắn nếu AI trả về */
+.chat-bubble.assistant code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #e9eef5;
+  font-size: 13px;
+}
