@@ -1020,6 +1020,17 @@ body {
   color: var(--color-text);
 }
 
+.toolbar-select {
+  padding: 9px 12px;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-text);
+  outline: none;
+  max-width: 180px;
+}
+
 .upload-form {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -2232,6 +2243,29 @@ body {
   word-break: break-word;
   max-height: 420px;
   overflow: auto;
+}
+
+.ai-summary {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.ai-summary p {
+  margin: 0 0 8px;
+}
+
+.ai-summary p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-summary strong {
+  font-weight: 600;
 }
 
 .preview-image-wrap {

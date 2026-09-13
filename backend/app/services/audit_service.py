@@ -12,6 +12,8 @@ class AuditAction:
     REJECT = "reject"
     SHARE_GRANT = "share_grant"
     SHARE_REVOKE = "share_revoke"
+    SUMMARIZE = "summarize"
+    CLASSIFY = "classify"
 
 
 # Ghi log hành động liên quan đến tài liệu

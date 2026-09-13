@@ -104,6 +104,19 @@ export const documentApi = {
     return request<{ extracted_text: string }>(`/documents/${id}/text`);
   },
 
+  // Tóm tắt tài liệu bằng AI
+  summary(id: number): Promise<{ document_id: number; summary: string }> {
+    return request<{ document_id: number; summary: string }>(
+      `/documents/${id}/summary`,
+      { method: "POST" },
+    );
+  },
+
+  // Phân loại tài liệu bằng AI (gán/đổi nhãn loại tài liệu)
+  classify(id: number): Promise<Document> {
+    return request<Document>(`/documents/${id}/classify`, { method: "POST" });
+  },
+
   // Cập nhật tiêu đề/thư mục của tài liệu
   update(id: number, data: UpdateDocumentPayload): Promise<Document> {
     return request<Document>(`/documents/${id}`, { method: "PUT", body: data });

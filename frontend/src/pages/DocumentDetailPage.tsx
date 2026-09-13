@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
@@ -49,6 +50,8 @@ function actionLabel(action: string): string {
     approve: "Phê duyệt",
     reject: "Từ chối",
     submit: "Gửi phê duyệt",
+    summarize: "Tóm tắt AI",
+    classify: "Phân loại AI",
   };
   return map[action] ?? action;
 }
@@ -86,6 +89,10 @@ export default function DocumentDetailPage() {
   const [showExtracted, setShowExtracted] = useState(false);
   const [textLoading, setTextLoading] = useState(false);
   const [textError, setTextError] = useState("");
+  const [summary, setSummary] = useState("");
+  const [summarizing, setSummarizing] = useState(false);
+  const [classifying, setClassifying] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   const resetFileInput = () => {
     if (fileInputRef.current) {
@@ -253,6 +260,36 @@ export default function DocumentDetailPage() {
       setTextError((err as Error).message);
     } finally {
       setTextLoading(false);
+    }
+  };
+
+  // Tóm tắt tài liệu bằng AI
+  const handleSummarize = async () => {
+    setSummarizing(true);
+    setAiError("");
+    try {
+      const res = await documentApi.summary(docId);
+      setSummary(res.summary);
+      setAiError("");
+    } catch (err) {
+      setAiError((err as Error).message);
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
+  // Phân loại tài liệu bằng AI
+  const handleClassify = async () => {
+    setClassifying(true);
+    setAiError("");
+    try {
+      const updated = await documentApi.classify(docId);
+      setDocument(updated);
+      setAiError("");
+    } catch (err) {
+      setAiError((err as Error).message);
+    } finally {
+      setClassifying(false);
     }
   };
 
@@ -433,6 +470,12 @@ export default function DocumentDetailPage() {
                   </div>
                 </div>
                 <div className="detail-meta-item">
+                  <div className="detail-meta-label">Loại tài liệu</div>
+                  <div className="detail-meta-value">
+                    {document.category || "Chưa phân loại"}
+                  </div>
+                </div>
+                <div className="detail-meta-item">
                   <div className="detail-meta-label">Phiên bản hiện tại</div>
                   <div className="detail-meta-value">
                     v{document.current_version}
@@ -560,6 +603,53 @@ export default function DocumentDetailPage() {
               {textError && <div className="alert alert-error">{textError}</div>}
               {showExtracted && extractedText && (
                 <pre className="extracted-text">{extractedText}</pre>
+              )}
+            </section>
+          )}
+
+          {procStatus.cls === "indexed" && (
+            <section className="panel">
+              <h2 className="panel-title">Phân loại tài liệu</h2>
+              {document.category ? (
+                <div style={{ marginBottom: "10px" }}>
+                  <span className="status-badge neutral">
+                    🏷️ {document.category}
+                  </span>
+                  <div className="muted small" style={{ marginTop: "6px" }}>
+                    Loại tài liệu do AI gán tự động.
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <span className="empty-icon">🏷️</span>
+                  Tài liệu chưa được phân loại.
+                </div>
+              )}
+              <Button
+                variant="secondary"
+                disabled={classifying}
+                onClick={handleClassify}
+              >
+                {classifying ? "Đang phân loại..." : "Phân loại bằng AI"}
+              </Button>
+            </section>
+          )}
+
+          {procStatus.cls === "indexed" && (
+            <section className="panel">
+              <h2 className="panel-title">Tóm tắt bằng AI</h2>
+              <Button
+                variant="secondary"
+                disabled={summarizing}
+                onClick={handleSummarize}
+              >
+                {summarizing ? "Đang tóm tắt..." : "Tóm tắt tài liệu"}
+              </Button>
+              {aiError && <div className="alert alert-error">{aiError}</div>}
+              {summary && (
+                <div className="ai-summary">
+                  <ReactMarkdown>{summary}</ReactMarkdown>
+                </div>
               )}
             </section>
           )}

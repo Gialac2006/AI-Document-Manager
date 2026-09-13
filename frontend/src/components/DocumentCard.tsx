@@ -30,6 +30,11 @@ export default function DocumentCard({ document, onDelete }: DocumentCardProps) 
           <span>{document.file_name}</span>
           <span>🕒 {formatDate(document.updated_at)}</span>
           <span className={`status-badge ${status.cls}`}>{status.label}</span>
+          {document.category && (
+            <span className="status-badge neutral">
+              🏷️ {document.category}
+            </span>
+          )}
         </div>
       </div>
       <div className="document-card-actions">

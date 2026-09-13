@@ -36,6 +36,8 @@ class Document(Base):
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Lưu lý do xử lý thất bại để Backend và Frontend có thể hiển thị lỗi
     processing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Loại tài liệu do AI gán (hợp đồng, quyết định, báo cáo, ...)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     
     current_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
 

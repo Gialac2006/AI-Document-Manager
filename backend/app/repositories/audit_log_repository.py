@@ -33,14 +33,17 @@ def create(
 def _apply_filters(
     query,
     *,
-    user_id: int | None,
+    user_id: int | list[int] | None,
     action: str | None,
     entity_type: str | None,
     date_from: datetime | None,
     date_to: datetime | None,
 ):
     if user_id is not None:
-        query = query.where(AuditLog.user_id == user_id)
+        if isinstance(user_id, list):
+            query = query.where(AuditLog.user_id.in_(user_id))
+        else:
+            query = query.where(AuditLog.user_id == user_id)
     if action:
         query = query.where(AuditLog.action == action)
     if entity_type:
@@ -80,7 +83,7 @@ def list_by_user(
 def list_all(
     db: Session,
     *,
-    user_id: int | None = None,
+    user_id: int | list[int] | None = None,
     action: str | None = None,
     entity_type: str | None = None,
     date_from: datetime | None = None,
@@ -109,7 +112,7 @@ def list_all(
 def count_all(
     db: Session,
     *,
-    user_id: int | None = None,
+    user_id: int | list[int] | None = None,
     action: str | None = None,
     entity_type: str | None = None,
     date_from: datetime | None = None,

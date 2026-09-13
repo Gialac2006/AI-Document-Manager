@@ -20,7 +20,12 @@ from app.schemas.document import (
     DocumentVersionRead,
 )
 from app.schemas.permission import PermissionCreate, PermissionRead
-from app.services import document_service, storage_service
+from app.services import (
+    classification_service,
+    document_service,
+    storage_service,
+    summary_service,
+)
 from app.services.audit_service import AuditAction, log_document
 from app.services.scope_service import AccessLevel
 
@@ -206,6 +211,54 @@ def download_version(
         "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
     }
     return FileResponse(str(full_path), filename=record.file_name, headers=headers)
+
+
+# Tóm tắt tài liệu bằng AI
+@router.post("/{document_id}/summary")
+def summarize_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document = document_service.get_document(
+        db, document_id=document_id, current_user=current_user
+    )
+    summary = summary_service.summarize_document(document)
+    log_document(
+        db,
+        user_id=current_user.id,
+        action=AuditAction.SUMMARIZE,
+        document_id=document.id,
+        details=document.title,
+    )
+    return {"document_id": document.id, "summary": summary}
+
+
+# Phân loại tài liệu bằng AI (gán/đổi nhãn loại tài liệu)
+@router.post("/{document_id}/classify", response_model=DocumentRead)
+def classify_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    document = document_service.get_document(
+        db, document_id=document_id, current_user=current_user
+    )
+    category = classification_service.classify_document(document)
+    document = document_repository.update_category(
+        db, document, category=category
+    )
+    log_document(
+        db,
+        user_id=current_user.id,
+        action=AuditAction.CLASSIFY,
+        document_id=document.id,
+        details=category,
+    )
+    document.access_level = document_service._resolve_access_for(
+        db, document, current_user
+    )
+    return document
 
 
 # Lấy danh sách quyền chia sẻ của tài liệu kèm thông tin người dùng
