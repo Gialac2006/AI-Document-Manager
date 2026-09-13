@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
@@ -86,6 +87,11 @@ export default function DocumentDetailPage() {
   const [showExtracted, setShowExtracted] = useState(false);
   const [textLoading, setTextLoading] = useState(false);
   const [textError, setTextError] = useState("");
+  // Kết quả tóm tắt tài liệu bằng AI
+  const [summary, setSummary] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+
 
   const resetFileInput = () => {
     if (fileInputRef.current) {
@@ -253,6 +259,23 @@ export default function DocumentDetailPage() {
       setTextError((err as Error).message);
     } finally {
       setTextLoading(false);
+    }
+  };
+  
+    // Gọi backend để Gemini tóm tắt toàn bộ tài liệu
+  const handleSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError("");
+
+    try {
+      const result = await documentApi.summarize(docId);
+
+      // Lưu kết quả để hiển thị trên trang
+      setSummary(result.summary);
+    } catch (err) {
+      setSummaryError((err as Error).message);
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -544,8 +567,12 @@ export default function DocumentDetailPage() {
           </section>
 
           {procStatus.cls === "indexed" && (
+          <section className="panel">
+            <h2 className="panel-title">Tóm tắt bằng AI</h2>
+          {procStatus.cls === "indexed" && (
             <section className="panel">
               <h2 className="panel-title">Nội dung đã trích xuất</h2>
+
               <Button
                 variant="secondary"
                 onClick={toggleExtracted}
@@ -557,12 +584,56 @@ export default function DocumentDetailPage() {
                     ? "Ẩn nội dung"
                     : "Xem nội dung đã trích xuất"}
               </Button>
-              {textError && <div className="alert alert-error">{textError}</div>}
+
+              {textError && (
+                <div className="alert alert-error">
+                  {textError}
+                </div>
+              )}
+
               {showExtracted && extractedText && (
-                <pre className="extracted-text">{extractedText}</pre>
+                <pre className="extracted-text">
+                  {extractedText}
+                </pre>
               )}
             </section>
           )}
+            <p className="muted">
+              AI sẽ đọc nội dung đã trích xuất và tạo bản tóm tắt cho tài liệu.
+            </p>
+
+            <Button
+              variant="primary"
+              onClick={handleSummary}
+              disabled={summaryLoading}
+            >
+              {summaryLoading
+                ? "AI đang tóm tắt..."
+                : summary
+                  ? "Tóm tắt lại"
+                  : "Tóm tắt tài liệu"}
+            </Button>
+
+            {summaryError && (
+              <div className="alert alert-error">
+                {summaryError}
+              </div>
+            )}
+
+            {summary && (
+              <div
+                className="ai-summary"
+                style={{
+                  marginTop: "16px",
+                  lineHeight: "1.7",
+                }}
+              >
+                <ReactMarkdown>{summary}</ReactMarkdown>
+              </div>
+            )}
+          </section>
+        )}
+        
 
           {canShare && (
             <section className="panel">

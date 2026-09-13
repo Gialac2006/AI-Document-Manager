@@ -15,6 +15,13 @@ export interface UpdateDocumentPayload {
   folder_id: number | null;
 }
 
+// Dữ liệu trả về từ API tóm tắt tài liệu
+export interface DocumentSummary {
+  document_id: number;
+  title: string;
+  summary: string;
+}
+
 // Lấy token đăng nhập từ localStorage
 function getToken() {
   return localStorage.getItem("access_token");
@@ -102,6 +109,16 @@ export const documentApi = {
   // Lấy nội dung văn bản đã trích xuất của tài liệu
   text(id: number): Promise<{ extracted_text: string }> {
     return request<{ extracted_text: string }>(`/documents/${id}/text`);
+  },
+
+  // Gọi AI để tóm tắt toàn bộ tài liệu
+  summarize(id: number): Promise<DocumentSummary> {
+    return request<DocumentSummary>(
+      `/documents/${id}/summary`,
+      {
+        method: "POST",
+      },
+    );
   },
 
   // Cập nhật tiêu đề/thư mục của tài liệu
