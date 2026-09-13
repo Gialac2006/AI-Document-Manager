@@ -15,7 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Cài torch bản CPU-only trước (tránh kéo bộ CUDA ~7GB vô dụng cho embedding CPU)
+RUN pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu \
+        torch \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY alembic.ini .

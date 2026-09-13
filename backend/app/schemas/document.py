@@ -17,6 +17,7 @@ class DocumentRead(BaseModel):
     status: str
     processing_status: str = "uploaded"
     processing_error: str | None = None
+    category: str | None = None
     current_version: int
     created_at: datetime
     updated_at: datetime

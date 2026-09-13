@@ -41,6 +41,7 @@ export interface Document {
   status: string;
   processing_status?: string;
   processing_error?: string | null;
+  category?: string | null;
   current_version: number;
   created_at: string;
   updated_at: string;
