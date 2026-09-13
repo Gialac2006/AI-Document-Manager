@@ -53,6 +53,39 @@ def list_documents(
     return documents
 
 
+# Tóm tắt toàn bộ nội dung của một tài liệu
+@router.post("/{document_id}/summary")
+def summarize_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Dùng lại get_document để kiểm tra:
+    # - tài liệu có tồn tại không
+    # - user có quyền xem tài liệu không
+    document = document_service.get_document(
+        db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+    # Gửi document sang summary_service để Gemini tóm tắt
+    summary = summary_service.summarize(document)
+    log_document(
+        db,
+        user_id=current_user.id,
+        action=AuditAction.SUMMARIZE,
+        document_id=document.id,
+        details=document.title,
+    )
+
+    return {
+        "document_id": document.id,
+        "title": document.title,
+        "summary": summary,
+    }
+
+
 # Tải lên tài liệu mới kèm tên và thư mục tuỳ chọn
 @router.post("", response_model=DocumentRead, status_code=201)
 def upload_document(
@@ -211,27 +244,6 @@ def download_version(
         "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
     }
     return FileResponse(str(full_path), filename=record.file_name, headers=headers)
-
-
-# Tóm tắt tài liệu bằng AI
-@router.post("/{document_id}/summary")
-def summarize_document(
-    document_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    document = document_service.get_document(
-        db, document_id=document_id, current_user=current_user
-    )
-    summary = summary_service.summarize_document(document)
-    log_document(
-        db,
-        user_id=current_user.id,
-        action=AuditAction.SUMMARIZE,
-        document_id=document.id,
-        details=document.title,
-    )
-    return {"document_id": document.id, "summary": summary}
 
 
 # Phân loại tài liệu bằng AI (gán/đổi nhãn loại tài liệu)
