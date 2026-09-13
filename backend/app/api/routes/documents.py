@@ -20,7 +20,7 @@ from app.schemas.document import (
     DocumentVersionRead,
 )
 from app.schemas.permission import PermissionCreate, PermissionRead
-from app.services import document_service, storage_service
+from app.services import document_service, storage_service, summary_service
 from app.services.audit_service import AuditAction, log_document
 from app.services.scope_service import AccessLevel
 
@@ -46,6 +46,32 @@ def list_documents(
     )
     response.headers["X-Total-Count"] = str(total)
     return documents
+
+
+# Tóm tắt toàn bộ nội dung của một tài liệu
+@router.post("/{document_id}/summary")
+def summarize_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Dùng lại get_document để kiểm tra:
+    # - tài liệu có tồn tại không
+    # - user có quyền xem tài liệu không
+    document = document_service.get_document(
+        db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+    # Gửi document sang summary_service để Gemini tóm tắt
+    summary = summary_service.summarize(document)
+
+    return {
+        "document_id": document.id,
+        "title": document.title,
+        "summary": summary,
+    }
 
 
 # Tải lên tài liệu mới kèm tên và thư mục tuỳ chọn
