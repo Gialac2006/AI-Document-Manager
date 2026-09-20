@@ -51,6 +51,8 @@ function actionLabel(action: string): string {
     approve: "Phê duyệt",
     reject: "Từ chối",
     submit: "Gửi phê duyệt",
+    summarize: "Tóm tắt AI",
+    classify: "Phân loại AI",
   };
   return map[action] ?? action;
 }
@@ -92,6 +94,9 @@ export default function DocumentDetailPage() {
   const [summary, setSummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
+  // Trạng thái phân loại tài liệu
+  const [classifying, setClassifying] = useState(false);
+  const [classifyError, setClassifyError] = useState("");
 
 
   const resetFileInput = () => {
@@ -269,7 +274,7 @@ export default function DocumentDetailPage() {
     setSummaryError("");
 
     try {
-      const result = await documentApi.summarize(docId);
+      const result = await documentApi.summary(docId);
 
       // Lưu kết quả để hiển thị trên trang
       setSummary(result.summary);
@@ -279,6 +284,23 @@ export default function DocumentDetailPage() {
       setSummaryLoading(false);
     }
   };
+
+  // Gọi backend để tự động phân loại tài liệu
+const handleClassify = async () => {
+  setClassifying(true);
+  setClassifyError("");
+
+  try {
+    const updated = await documentApi.classify(docId);
+
+    // Backend trả lại tài liệu với category mới
+    setDocument(updated);
+  } catch (err) {
+    setClassifyError((err as Error).message);
+  } finally {
+    setClassifying(false);
+  }
+};
 
   if (loading) return <Spinner />;
 
@@ -532,11 +554,32 @@ export default function DocumentDetailPage() {
             </div>
 
             <div className="doc-info-row">
-              <span>Phân loại</span>
-              <strong>
-                {document.category || "Chưa phân loại"}
-              </strong>
-            </div>
+  <span>Phân loại</span>
+
+                <div className="doc-category-value">
+                  <strong>
+                    {document.category || "Chưa phân loại"}
+                  </strong>
+
+                  <Button
+                    variant="text"
+                    onClick={handleClassify}
+                    disabled={classifying}
+                  >
+                    {classifying
+                      ? "Đang phân loại..."
+                      : document.category
+                        ? "Phân loại lại"
+                        : "Phân loại"}
+                  </Button>
+                </div>
+              </div>
+
+              {classifyError && (
+                <div className="alert alert-error">
+                  {classifyError}
+                </div>
+              )}
 
             <div className="doc-info-row">
               <span>Ngày tạo</span>

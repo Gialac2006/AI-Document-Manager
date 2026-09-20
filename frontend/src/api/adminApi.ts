@@ -49,13 +49,6 @@ export const adminApi = {
     return request<Document[]>("/admin/pending-approvals");
   },
 
-  // Lấy nhật ký hoạt động của một người dùng
-  auditLogs(userId: number, limit = 100): Promise<AuditLog[]> {
-    return request<AuditLog[]>(
-      `/audit-logs?user_id=${userId}&limit=${limit}`,
-    );
-  },
-
   // Lấy toàn bộ nhật ký với bộ lọc tìm kiếm
   listAllAuditLogs(query: AuditLogQuery = {}): Promise<AuditLog[]> {
     const params = new URLSearchParams();

@@ -30,6 +30,7 @@ export default function DocumentsPage() {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   const loadData = useCallback(
     async (folderId: number | null, targetPage = 1, append = false) => {
@@ -103,14 +104,24 @@ export default function DocumentsPage() {
 
   const filteredDocuments = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return documents;
     return documents.filter((doc) => {
-      return (
+      const matchesSearch =
+        !query ||
         doc.title.toLowerCase().includes(query) ||
-        (doc.file_name || "").toLowerCase().includes(query)
-      );
+        (doc.file_name || "").toLowerCase().includes(query);
+      const matchesCategory =
+        !categoryFilter || (doc.category || "") === categoryFilter;
+      return matchesSearch && matchesCategory;
     });
-  }, [documents, search]);
+  }, [documents, search, categoryFilter]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    documents.forEach((doc) => {
+      if (doc.category) set.add(doc.category);
+    });
+    return [...set].sort();
+  }, [documents]);
 
   const folderName = selectedFolder
     ? folders.find((f) => f.id === selectedFolder)?.name || ""
@@ -144,8 +155,22 @@ export default function DocumentsPage() {
         <section className="documents-main">
           <div className="documents-toolbar">
             <span className="badge">{folderName}</span>
-            <span className="muted">{search ? filteredDocuments.length : total} tài liệu</span>
+            <span className="muted">{search || categoryFilter ? filteredDocuments.length : total} tài liệu</span>
             <div className="toolbar-spacer"></div>
+            {categoryOptions.length > 0 && (
+              <select
+                className="toolbar-select"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">🏷️ Tất cả loại</option>
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="toolbar-search">
             <Search size={16} strokeWidth={1.8} />
 

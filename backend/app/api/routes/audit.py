@@ -38,13 +38,21 @@ def list_audit_logs(
             offset=offset,
         )
 
-    # Mặc định xem lịch sử của chính mình nếu không chỉ định user
+    # Manager: mặc định xem lịch sử của toàn bộ thành viên trong tổ chức.
+    # Staff/Individual: mặc định chỉ xem lịch sử của chính mình.
     if user_id is None:
-        user_id = current_user.id
-        user_id = current_user.id
+        if current_user.role == UserRole.MANAGER:
+            members = user_repository.list_users(
+                db, organization_id=current_user.organization_id
+            )
+            user_id: int | list[int] = [m.id for m in members] or [
+                current_user.id
+            ]
+        else:
+            user_id = current_user.id
 
-    # Kiểm tra quyền khi xem lịch sử của người khác
-    if user_id != current_user.id:
+    # Kiểm tra quyền khi xem lịch sử của một người dùng cụ thể
+    if isinstance(user_id, int) and user_id != current_user.id:
         if current_user.role != UserRole.MANAGER:
             raise ForbiddenError("Bạn không thể xem lịch sử của người khác")
         target = user_repository.get_by_id(db, user_id)

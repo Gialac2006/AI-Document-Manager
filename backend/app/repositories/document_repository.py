@@ -1,4 +1,4 @@
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.document import Document
@@ -24,15 +24,13 @@ def list_all(
 ) -> tuple[list[Document], int]:
     """Trả về (danh sách tài liệu, tổng số bản ghi).
 
-    Khi truyền user_id (staff/individual), chỉ trả về tài liệu thuộc phạm vi
-    user: tài liệu do user tạo, được chia sẻ với user, hoặc đã được duyệt.
+    - Manager/super_admin (user_id=None): thấy toàn bộ tài liệu trong phạm vi tổ chức.
+    - Staff (user_id + organization_id): thấy tài liệu của tổ chức mà mình là chủ,
+      được chia sẻ, hoặc đã duyệt — KHÔNG thấy tài liệu tổ chức khác.
+    - Individual (user_id + owner_id): thấy tài liệu mình tạo và được chia sẻ —
+      KHÔNG thấy tài liệu approved của người khác.
     """
     query = select(Document)
-    conditions: list = []
-    if organization_id is not None:
-        conditions.append(Document.organization_id == organization_id)
-    elif owner_id is not None:
-        conditions.append(Document.owner_id == owner_id)
 
     if user_id is not None:
         query = query.outerjoin(
@@ -40,16 +38,34 @@ def list_all(
             (Permission.document_id == Document.id)
             & (Permission.user_id == user_id),
         )
-        conditions.append(
-            or_(
-                Document.owner_id == user_id,
-                Permission.id.isnot(None),
-                Document.status == "approved",
+        if organization_id is not None:
+            # Staff trong tổ chức: trong org VÀ (mình tạo, được share, hoặc đã duyệt)
+            query = query.where(
+                and_(
+                    Document.organization_id == organization_id,
+                    or_(
+                        Document.owner_id == user_id,
+                        Permission.id.isnot(None),
+                        Document.status == "approved",
+                    ),
+                )
             )
-        )
+        else:
+            # Individual: chỉ tài liệu mình tạo hoặc được share
+            query = query.where(
+                or_(
+                    Document.owner_id == user_id,
+                    Permission.id.isnot(None),
+                )
+            )
+    elif organization_id is not None:
+        # Manager: toàn bộ org
+        query = query.where(Document.organization_id == organization_id)
+    elif owner_id is not None:
+        # Managerish by owner (fallback)
+        query = query.where(Document.owner_id == owner_id)
+    # else: super_admin — không filter
 
-    if conditions:
-        query = query.where(or_(*conditions))
     if folder_id is not None:
         query = query.where(Document.folder_id == folder_id)
 
@@ -120,6 +136,14 @@ def update_file(
     document.file_name = file_name
     document.file_type = file_type
     document.current_version = current_version
+    db.commit()
+    db.refresh(document)
+    return document
+
+
+# Cập nhật loại tài liệu do AI gán
+def update_category(db: Session, document: Document, *, category: str) -> Document:
+    document.category = category
     db.commit()
     db.refresh(document)
     return document
