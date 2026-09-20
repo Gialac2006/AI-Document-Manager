@@ -1,6 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import {
+  FileText,
+  LayoutDashboard,
+  Search,
+  MessageSquare,
+  Shield,
+  PanelLeftClose,
+  PanelLeftOpen,
+  UserRound,
+  LogOut,
+} from "lucide-react";
+
+import type { LucideIcon } from "lucide-react";
+
 import { useAuth } from "../hooks/useAuth";
 import { ROLE_LABELS } from "../utils/roles";
 import { formatDate } from "../utils/format";
@@ -8,7 +22,7 @@ import { formatDate } from "../utils/format";
 interface NavItem {
   to: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
 interface NavGroup {
@@ -19,17 +33,37 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "Chính",
-    items: [{ to: "/dashboard", label: "Bảng điều khiển", icon: "🏠" }],
+    items: [
+      {
+        to: "/dashboard",
+        label: "Bảng điều khiển",
+        icon: LayoutDashboard,
+      },
+    ],
   },
   {
     label: "Quản lý",
-    items: [{ to: "/documents", label: "Tài liệu", icon: "📁" }],
+    items: [
+      {
+        to: "/documents",
+        label: "Tài liệu",
+        icon: FileText,
+      },
+    ],
   },
   {
     label: "AI",
     items: [
-      { to: "/search", label: "Tìm kiếm", icon: "🔍" },
-      { to: "/chat", label: "Chat", icon: "💬" },
+      {
+        to: "/search",
+        label: "Tìm kiếm",
+        icon: Search,
+      },
+      {
+        to: "/chat",
+        label: "Chat",
+        icon: MessageSquare,
+      },
     ],
   },
 ];
@@ -87,7 +121,16 @@ export default function MainLayout() {
   const groups: NavGroup[] = showAdmin
     ? [
         ...NAV_GROUPS,
-        { label: "Hệ thống", items: [{ to: "/admin", label: "Quản trị", icon: "🛠️" }] },
+        {
+          label: "Hệ thống",
+          items: [
+            {
+              to: "/admin",
+              label: "Quản trị",
+              icon: Shield,
+            },
+          ],
+        },
       ]
     : NAV_GROUPS;
 
@@ -115,7 +158,9 @@ export default function MainLayout() {
     <div className={`layout ${collapsed ? "collapsed" : ""}`}>
       <aside className="layout-sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-logo">📄</div>
+          <div className="sidebar-brand-logo">
+          <FileText size={20} strokeWidth={2} />
+           </div>
           <div className="sidebar-brand-name">AI Document Manager</div>
         </div>
 
@@ -123,7 +168,10 @@ export default function MainLayout() {
           {groups.map((group) => (
             <div className="sidebar-group" key={group.label}>
               <div className="sidebar-group-label">{group.label}</div>
-              {group.items.map((item) => (
+              {group.items.map((item) => {
+              const Icon = item.icon;
+
+              return (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -132,10 +180,11 @@ export default function MainLayout() {
                   }
                   title={item.label}
                 >
-                  <span className="nav-icon">{item.icon}</span>
+                  <Icon className="nav-icon" size={18} strokeWidth={1.8} />
                   <span className="nav-label">{item.label}</span>
                 </NavLink>
-              ))}
+              );
+            })}
             </div>
           ))}
         </nav>
@@ -146,7 +195,12 @@ export default function MainLayout() {
             className="collapse-button"
             onClick={() => setCollapsed((c) => !c)}
           >
-            <span>{collapsed ? "➡️" : "⬅️"}</span>
+            {collapsed ? (
+              <PanelLeftOpen size={18} strokeWidth={1.8} />
+            ) : (
+              <PanelLeftClose size={18} strokeWidth={1.8} />
+            )}
+
             <span className="collapse-label">Thu gọn</span>
           </button>
         </div>
@@ -159,7 +213,11 @@ export default function MainLayout() {
           </div>
           <div className="topbar-actions">
             <form className="topbar-search" onSubmit={handleSearch}>
-              <span className="topbar-search-icon">🔍</span>
+              <Search
+                className="topbar-search-icon"
+                size={17}
+                strokeWidth={1.8}
+              />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -226,7 +284,8 @@ export default function MainLayout() {
                     onClick={goToProfile}
                     role="menuitem"
                   >
-                    👤 Thông tin người dùng
+                    <UserRound size={16} strokeWidth={1.8} />
+                    <span>Thông tin người dùng</span>
                   </button>
                   <button
                     type="button"
@@ -234,7 +293,8 @@ export default function MainLayout() {
                     onClick={handleLogout}
                     role="menuitem"
                   >
-                    Đăng xuất
+                    <LogOut size={16} strokeWidth={1.8} />
+                    <span>Đăng xuất</span>
                   </button>
                 </div>
               )}

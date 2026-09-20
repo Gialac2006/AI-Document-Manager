@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
+import { FileText } from "lucide-react";
 
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
@@ -314,361 +315,485 @@ export default function DocumentDetailPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <Link
-            to="/documents"
-            className="text-button"
-            style={{ marginBottom: "6px", display: "inline-block" }}
-          >
-            ← Quay lại tài liệu
-          </Link>
-          <div className="doc-detail-title-row">
-            <h1>{document.title}</h1>
-            <span className={`status-badge ${status.cls}`}>{status.label}</span>
-          </div>
-          <p className="page-header-desc">
-            <span className={`doc-type-icon ${meta.cls}`}>{meta.icon}</span>{" "}
-            {document.file_name}
-          </p>
-        </div>
-        <div className="row-actions" style={{ marginTop: "0" }}>
-          <Button
-            variant="secondary"
-            onClick={() => documentApi.download(document.id, document.file_name)}
-          >
-            ⬇️ Tải xuống
-          </Button>
-          {canEdit && (
-            <>
-              <Button
-                variant="secondary"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? "Đang tải..." : "⬆️ Tải bản mới"}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                onChange={handleNewVersion}
-              />
-              {!editing && (
-                <Button variant="secondary" onClick={() => setEditing(true)}>
-                  Sửa
-                </Button>
-              )}
-            </>
-          )}
-          {canEdit && <span className="muted access-chip">{ACCESS_LABELS[access]} · {access}</span>}
-          {canDelete && (
-            <Button variant="danger" onClick={handleDelete}>
-              Xoá
-            </Button>
-          )}
-        </div>
-      </div>
+     <div className="doc-detail-header">
+  <div className="doc-detail-heading">
+    <Link to="/documents" className="doc-back-link">
+      ← Tài liệu
+    </Link>
+
+    <h1>{document.title}</h1>
+
+    <div className="doc-submeta">
+      <span className={`doc-type-icon ${meta.cls}`}>
+        <FileText size={17} strokeWidth={1.8} />
+      </span>
+
+      <span>{document.file_name}</span>
+
+      <span className="doc-meta-dot">•</span>
+
+      <span>
+        {document.file_type?.toUpperCase() || "Tệp"}
+      </span>
+
+      <span className="doc-meta-dot">•</span>
+
+      <span>v{document.current_version}</span>
+
+      <span className={`status-badge ${status.cls}`}>
+        {status.label}
+      </span>
+
+      <span className={`status-badge ${procStatus.cls}`}>
+        {procStatus.label}
+      </span>
+    </div>
+  </div>
+</div>
 
       {error && <div className="alert alert-error">{error}</div>}
+      <div className="doc-detail-body-grid">
+  {/* Cột trái: preview + nội dung trích xuất */}
+  <div className="doc-detail-column">
+    <section className="panel doc-preview-panel">
+      <h2 className="panel-title">
+        Xem trước tài liệu
 
-      <div className="detail-grid">
-        <div className="detail-main">
-          <section className="panel">
+        {previewVersion != null && (
+          <span className="version-preview-label">
+            đang xem v{previewVersion}
+          </span>
+        )}
+      </h2>
+
+      {previewable ? (
+        <DocumentPreview
+          documentId={document.id}
+          fileName={previewFileName}
+          fileType={document.file_type}
+          version={previewVersion ?? undefined}
+        />
+      ) : (
+        <div className="empty-state">
+          Loại file này chưa hỗ trợ xem trước.
+        </div>
+      )}
+
+      {previewVersion != null && (
+        <div className="version-preview-bar">
+          <span className="muted">
+            Bạn đang xem phiên bản cũ.
+          </span>
+
+          <Button
+            variant="text"
+            onClick={() => setPreviewVersion(null)}
+          >
+            Trở về bản mới nhất
+          </Button>
+        </div>
+      )}
+    </section>
+
+    {procStatus.cls === "indexed" && (
+      <section className="panel doc-extracted-panel">
+        <div className="doc-section-header">
+          <div>
             <h2 className="panel-title">
-              Xem trước
-              {previewVersion != null && (
-                <span className="version-preview-label">
-                  đang xem v{previewVersion} (bản cũ)
-                </span>
-              )}
+              Nội dung trích xuất
             </h2>
-            {previewable ? (
-              <DocumentPreview
-                documentId={document.id}
-                fileName={previewFileName}
-                fileType={document.file_type}
-                version={previewVersion ?? undefined}
-              />
-            ) : (
-              <div className="empty-state">
-                <span className="empty-icon">📄</span>
-                Loại file này chưa hỗ trợ xem trước. Tải xuống để mở bằng phần
-                mềm phù hợp.
-              </div>
-            )}
-            {previewVersion != null && (
-              <div className="version-preview-bar">
-                <span className="muted">
-                  Bạn đang xem bản cũ. Tải về để so sánh với bản mới nhất.
-                </span>
-                <Button
-                  variant="text"
-                  onClick={() => setPreviewVersion(null)}
-                >
-                  ← Trở về bản mới nhất
-                </Button>
-              </div>
-            )}
-          </section>
 
-          <section className="panel">
-            <h2 className="panel-title">Thông tin tài liệu</h2>
-            {editing ? (
-              <div>
-                <div className="form-group">
-                  <label>Tiêu đề</label>
-                  <input value={title} onChange={(e) => setTitle(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Thư mục</label>
-                  <select
-                    value={folderId}
-                    onChange={(e) => setFolderId(e.target.value)}
-                  >
-                    <option value="">— Gốc —</option>
-                    {folders.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="row-actions">
-                  <Button variant="primary" onClick={handleSave}>
-                    Lưu thay đổi
-                  </Button>
-                  <Button variant="text" onClick={() => setEditing(false)}>
-                    Huỷ
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="detail-meta-grid">
-                <div className="detail-meta-item">
-                  <div className="detail-meta-label">Tên file</div>
-                  <div className="detail-meta-value">{document.file_name}</div>
-                </div>
-                <div className="detail-meta-item">
-                  <div className="detail-meta-label">Loại file</div>
-                  <div className="detail-meta-value">
-                    {document.file_type?.toUpperCase() || "—"}
-                  </div>
-                </div>
-                <div className="detail-meta-item">
-                  <div className="detail-meta-label">Phiên bản hiện tại</div>
-                  <div className="detail-meta-value">
-                    v{document.current_version}
-                  </div>
-                </div>
-                <div className="detail-meta-item">
-                  <div className="detail-meta-label">Ngày tạo</div>
-                  <div className="detail-meta-value">
-                    {formatDate(document.created_at)}
-                  </div>
-                </div>
-                <div className="detail-meta-item">
-                  <div className="detail-meta-label">Ngày cập nhật</div>
-                  <div className="detail-meta-value">
-                    {formatDate(document.updated_at)}
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
+            <p className="doc-section-desc">
+              Nội dung văn bản được lấy từ tài liệu.
+            </p>
+          </div>
 
-          <section className="panel">
-            <h2 className="panel-title">Lịch sử phiên bản</h2>
-            {versions.length === 0 ? (
-              <div className="empty-state">
-                <span className="empty-icon">🗃️</span>
-                Chưa có phiên bản nào.
-              </div>
-            ) : (
-              <table className="data-table versions-table">
-                <colgroup>
-                  <col className="version-col" />
-                  <col />
-                  <col className="time-col" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Phiên bản</th>
-                    <th>Tên file</th>
-                    <th>Thời điểm</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {versions.map((v) => (
-                    <tr key={v.id}>
-                      <td>
-                        <span className="badge">v{v.version}</span>
-                      </td>
-                      <td className="file-col">{v.file_name}</td>
-                      <td className="muted">{formatDate(v.created_at)}</td>
-                      <td>
-                        <div className="row-actions-compact">
-                          <Button
-                            variant="secondary"
-                            onClick={() => setPreviewVersion(v.version)}
-                          >
-                            Xem
-                          </Button>
-                          <Button
-                            variant="text"
-                            onClick={() =>
-                              documentApi.downloadVersion(
-                                document.id,
-                                v.version,
-                                v.file_name,
-                              )
-                            }
-                          >
-                            ⬇ Tải
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
+          <Button
+            variant="secondary"
+            onClick={toggleExtracted}
+            disabled={textLoading}
+          >
+            {textLoading
+              ? "Đang tải..."
+              : showExtracted
+                ? "Thu gọn"
+                : "Xem nội dung"}
+          </Button>
         </div>
 
-        <aside className="detail-side">
-          <section className="panel">
-            <h2 className="panel-title">Trạng thái tài liệu</h2>
-            <div className="ai-status-card">
-              <span className={`status-badge ${status.cls}`}>
-                {status.label}
-              </span>
-              <span className={`status-badge ${procStatus.cls}`}>
-                {procStatus.label}
-              </span>
-              <p className="ai-status-desc">
-                {status.cls === "pending" &&
-                  "Tài liệu đang chờ quản lý duyệt trước khi chính thức sử dụng trong hệ thống."}
-                {status.cls === "approved" &&
-                  "Tài liệu đã được duyệt và chính thức sử dụng trong hệ thống."}
-                {status.cls === "rejected" &&
-                  "Tài liệu bị từ chối duyệt. Liên hệ quản lý để biết lý do."}
-                {procStatus.cls === "processing" &&
-                  "Tài liệu đang được AI xử lý. Vui lòng chờ trong giây lát."}
-                {procStatus.cls === "indexed" &&
-                  "Nội dung tài liệu đã được trích xuất và sẵn sàng cho tìm kiếm."}
-                {procStatus.cls === "rejected" &&
-                  status.cls !== "rejected" &&
-                  document.processing_error &&
-                  `Lỗi xử lý: ${document.processing_error}`}
-              </p>
+        {textError && (
+          <div className="alert alert-error">
+            {textError}
+          </div>
+        )}
+
+        {showExtracted && extractedText ? (
+          <pre className="extracted-text">
+            {extractedText}
+          </pre>
+        ) : (
+          <div className="doc-content-placeholder">
+            Chọn “Xem nội dung” để hiển thị văn bản đã trích xuất.
+          </div>
+        )}
+      </section>
+    )}
+  </div>
+
+  {/* Cột phải: thông tin + tóm tắt + phiên bản */}
+  <div className="doc-detail-column">
+    <section className="panel doc-info-panel">
+      <div className="doc-section-header">
+        <h2 className="panel-title">
+          Thông tin tài liệu
+        </h2>
+
+        {canEdit && !editing && (
+          <Button
+            variant="text"
+            onClick={() => setEditing(true)}
+          >
+            Chỉnh sửa
+          </Button>
+        )}
+      </div>
+
+      {editing ? (
+        <div>
+          <div className="form-group">
+            <label>Tiêu đề</label>
+
+            <input
+              value={title}
+              onChange={(e) =>
+                setTitle(e.target.value)
+              }
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Thư mục</label>
+
+            <select
+              value={folderId}
+              onChange={(e) =>
+                setFolderId(e.target.value)
+              }
+            >
+              <option value="">— Gốc —</option>
+
+              {folders.map((f) => (
+                <option
+                  key={f.id}
+                  value={f.id}
+                >
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="doc-edit-actions">
+            <Button
+              variant="primary"
+              onClick={handleSave}
+            >
+              Lưu thay đổi
+            </Button>
+
+            <Button
+              variant="text"
+              onClick={() => setEditing(false)}
+            >
+              Hủy
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="doc-info-list">
+            <div className="doc-info-row">
+              <span>Tên file</span>
+              <strong>{document.file_name}</strong>
             </div>
-          </section>
 
-          {procStatus.cls === "indexed" && (
-          <section className="panel">
-            <h2 className="panel-title">Tóm tắt bằng AI</h2>
-          {procStatus.cls === "indexed" && (
-            <section className="panel">
-              <h2 className="panel-title">Nội dung đã trích xuất</h2>
+            <div className="doc-info-row">
+              <span>Loại file</span>
+              <strong>
+                {document.file_type?.toUpperCase() || "—"}
+              </strong>
+            </div>
 
+            <div className="doc-info-row">
+              <span>Phiên bản</span>
+              <strong>
+                v{document.current_version}
+              </strong>
+            </div>
+
+            <div className="doc-info-row">
+              <span>Phân loại</span>
+              <strong>
+                {document.category || "Chưa phân loại"}
+              </strong>
+            </div>
+
+            <div className="doc-info-row">
+              <span>Ngày tạo</span>
+              <strong>
+                {formatDate(document.created_at)}
+              </strong>
+            </div>
+
+            <div className="doc-info-row">
+              <span>Cập nhật</span>
+              <strong>
+                {formatDate(document.updated_at)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="doc-info-actions">
+            <Button
+              variant="primary"
+              onClick={() =>
+                documentApi.download(
+                  document.id,
+                  document.file_name,
+                )
+              }
+            >
+              ↓ Tải xuống
+            </Button>
+
+            {canEdit && (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={uploading}
+                  onClick={() =>
+                    fileInputRef.current?.click()
+                  }
+                >
+                  {uploading
+                    ? "Đang tải..."
+                    : "↑ Tải phiên bản mới"}
+                </Button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  hidden
+                  onChange={handleNewVersion}
+                />
+              </>
+            )}
+
+            {canDelete && (
               <Button
-                variant="secondary"
-                onClick={toggleExtracted}
-                disabled={textLoading}
+                variant="danger"
+                onClick={handleDelete}
               >
-                {textLoading
-                  ? "Đang tải..."
-                  : showExtracted
-                    ? "Ẩn nội dung"
-                    : "Xem nội dung đã trích xuất"}
+                Xóa tài liệu
               </Button>
+            )}
+          </div>
+        </>
+      )}
+    </section>
 
-              {textError && (
-                <div className="alert alert-error">
-                  {textError}
-                </div>
-              )}
+    {procStatus.cls === "indexed" && (
+      <section className="panel doc-summary-panel">
+        <div className="doc-section-header">
+          <div>
+            <h2 className="panel-title">
+              Tóm tắt tài liệu
+            </h2>
 
-              {showExtracted && extractedText && (
-                <pre className="extracted-text">
-                  {extractedText}
-                </pre>
-              )}
-            </section>
-          )}
-            <p className="muted">
-              AI sẽ đọc nội dung đã trích xuất và tạo bản tóm tắt cho tài liệu.
+            <p className="doc-section-desc">
+              Nắm nhanh các nội dung chính của tài liệu.
             </p>
+          </div>
+
+          <Button
+            variant="primary"
+            onClick={handleSummary}
+            disabled={summaryLoading}
+          >
+            {summaryLoading
+              ? "Đang tóm tắt..."
+              : summary
+                ? "Tóm tắt lại"
+                : "Tóm tắt"}
+          </Button>
+        </div>
+
+        {summaryError && (
+          <div className="alert alert-error">
+            {summaryError}
+          </div>
+        )}
+
+        {summary ? (
+          <div className="ai-summary">
+            <ReactMarkdown>
+              {summary}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <div className="doc-content-placeholder">
+            Chưa có bản tóm tắt cho tài liệu này.
+          </div>
+        )}
+      </section>
+    )}
+
+    <section className="panel doc-version-panel">
+      <h2 className="panel-title">
+        Phiên bản tài liệu
+      </h2>
+
+      {versions.length === 0 ? (
+        <div className="empty-state">
+          Chưa có phiên bản nào.
+        </div>
+      ) : (
+        <table className="data-table versions-table">
+          <thead>
+            <tr>
+              <th>Phiên bản</th>
+              <th>Tên file</th>
+              <th>Thời điểm</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {versions.map((v) => (
+              <tr key={v.id}>
+                <td>
+                  <span className="badge">
+                    v{v.version}
+                  </span>
+                </td>
+
+                <td className="file-col">
+                  {v.file_name}
+                </td>
+
+                <td className="muted">
+                  {formatDate(v.created_at)}
+                </td>
+
+                <td>
+                  <div className="row-actions-compact">
+                    <Button
+                      variant="text"
+                      onClick={() =>
+                        setPreviewVersion(v.version)
+                      }
+                    >
+                      Xem
+                    </Button>
+
+                    <Button
+                      variant="text"
+                      onClick={() =>
+                        documentApi.downloadVersion(
+                          document.id,
+                          v.version,
+                          v.file_name,
+                        )
+                      }
+                    >
+                      Tải
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  </div>
+</div>
+
+{/* Hoạt động giữ lại nhưng làm thành một khối phụ */}
+<section className="panel doc-activity-panel">
+  <h2 className="panel-title">
+    Hoạt động gần đây
+  </h2>
+
+  {auditLogs.length === 0 ? (
+    <div className="empty-state">
+      Chưa có hoạt động nào.
+    </div>
+  ) : (
+    <div className="audit-list">
+      {auditLogs.slice(0, 5).map((log) => (
+        <div
+          key={log.id}
+          className="audit-item"
+        >
+          <div className="audit-item-head">
+            <span className="badge">
+              {actionLabel(log.action)}
+            </span>
+
+            <span className="muted">
+              {formatDate(log.created_at)}
+            </span>
+          </div>
+
+          {log.details && (
+            <div className="muted small">
+              {log.details}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+</section>
+        <div className="doc-management-grid">
+          {canShare && (
+            <section className="panel doc-access-panel">
+              <h2 className="panel-title">  Quyền truy cập
+              </h2>
+            <div className="doc-access-form">
+            <div className="doc-access-field">
+              <label>Email người nhận</label>
+              <input
+                type="email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+
+            <div className="doc-access-field doc-access-level">
+              <label>Quyền</label>
+              <select
+                value={shareLevel}
+                onChange={(e) => setShareLevel(e.target.value)}
+              >
+                {LEVEL_OPTIONS.map((level) => (
+                  <option key={level} value={level}>
+                    {ACCESS_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <Button
               variant="primary"
-              onClick={handleSummary}
-              disabled={summaryLoading}
+              disabled={sharing || !shareEmail.trim()}
+              onClick={handleAddShare}
             >
-              {summaryLoading
-                ? "AI đang tóm tắt..."
-                : summary
-                  ? "Tóm tắt lại"
-                  : "Tóm tắt tài liệu"}
+              {sharing ? "Đang chia sẻ..." : "Chia sẻ"}
             </Button>
-
-            {summaryError && (
-              <div className="alert alert-error">
-                {summaryError}
-              </div>
-            )}
-
-            {summary && (
-              <div
-                className="ai-summary"
-                style={{
-                  marginTop: "16px",
-                  lineHeight: "1.7",
-                }}
-              >
-                <ReactMarkdown>{summary}</ReactMarkdown>
-              </div>
-            )}
-          </section>
-        )}
-        
-
-          {canShare && (
-            <section className="panel">
-              <h2 className="panel-title">Chia sẻ tài liệu</h2>
-              <div className="form-group">
-                <label>Email người nhận</label>
-                <input
-                  type="email"
-                  value={shareEmail}
-                  onChange={(e) => setShareEmail(e.target.value)}
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div className="form-group">
-                <label>Quyền truy cập</label>
-                <select
-                  value={shareLevel}
-                  onChange={(e) => setShareLevel(e.target.value)}
-                >
-                  {LEVEL_OPTIONS.map((l) => (
-                    <option key={l} value={l}>
-                      {ACCESS_LABELS[l]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="row-actions" style={{ marginTop: "8px" }}>
-                <Button
-                  variant="primary"
-                  disabled={sharing || !shareEmail.trim()}
-                  onClick={handleAddShare}
-                >
-                  {sharing ? "Đang chia sẻ..." : "Chia sẻ"}
-                </Button>
-              </div>
+          </div>
               {shareError && <div className="alert alert-error">{shareError}</div>}
 
               {permissions.length > 0 && (
@@ -698,16 +823,15 @@ export default function DocumentDetailPage() {
                 </div>
               )}
               {permissions.length === 0 && (
-                <div className="empty-state">
-                  <span className="empty-icon">🔗</span>
-                  Chưa chia sẻ cho ai.
-                </div>
-              )}
+              <div className="doc-access-empty">
+                Chưa chia sẻ tài liệu này cho người dùng khác.
+              </div>
+            )}
             </section>
           )}
 
           {canApprove && (
-            <section className="panel">
+            <section className="panel doc-approval-panel">
               <h2 className="panel-title">Phê duyệt tài liệu</h2>
               {document.status === "approved" ? (
                 <div className="empty-state">
@@ -764,30 +888,8 @@ export default function DocumentDetailPage() {
               )}
             </section>
           )}
-
-          <section className="panel">
-            <h2 className="panel-title">Nhật ký hoạt động</h2>
-            {auditLogs.length === 0 ? (
-              <div className="empty-state">
-                <span className="empty-icon">📋</span>
-                Chưa có hoạt động nào.
-              </div>
-            ) : (
-              <div className="audit-list">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="audit-item">
-                    <div className="audit-item-head">
-                      <span className="badge">{actionLabel(log.action)}</span>
-                      <span className="muted">{formatDate(log.created_at)}</span>
-                    </div>
-                    {log.details && <div className="muted small">{log.details}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-          </aside>
+          </div>
       </div>
-    </div>
+    
   );
 }

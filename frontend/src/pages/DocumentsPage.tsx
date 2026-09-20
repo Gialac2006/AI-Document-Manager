@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  FileText,
+  Search,
+  Upload,
+  X,
+} from "lucide-react";
+
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
 import DocumentCard from "../components/DocumentCard.tsx";
@@ -140,8 +147,9 @@ export default function DocumentsPage() {
             <span className="muted">{search ? filteredDocuments.length : total} tài liệu</span>
             <div className="toolbar-spacer"></div>
             <div className="toolbar-search">
-              <span>🔍</span>
-              <input
+            <Search size={16} strokeWidth={1.8} />
+
+            <input
                 placeholder="Tìm theo tên tài liệu..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -152,7 +160,17 @@ export default function DocumentsPage() {
               className="secondary-button"
               onClick={() => setShowUpload((s) => !s)}
             >
-              {showUpload ? "✕ Đóng" : "⬆️ Tải lên"}
+              {showUpload ? (
+                <>
+                  <X size={16} strokeWidth={1.8} />
+                  <span>Đóng</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={16} strokeWidth={1.8} />
+                  <span>Tải lên</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -169,7 +187,11 @@ export default function DocumentsPage() {
 
           {filteredDocuments.length === 0 ? (
             <div className="empty-state">
-              <span className="empty-icon">🗂️</span>
+              <FileText
+                className="empty-state-icon"
+                size={24}
+                strokeWidth={1.6}
+              />
               {search ? (
                 <>Không tìm thấy tài liệu phù hợp với "{search}".</>
               ) : (
