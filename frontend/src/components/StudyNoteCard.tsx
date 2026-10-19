@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
-
+import StudyNoteReviewPanel from "./StudyNoteReviewPanel";
 import { studyNoteApi } from "../api/studyNoteApi";
 import type { StudyNote } from "../api/studyNoteApi";
 import { formatDate } from "../utils/format";
@@ -24,7 +24,7 @@ export default function StudyNoteCard({
   // Bản nháp riêng, chưa ảnh hưởng dữ liệu đã lưu.
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
-
+  const [reviewing, setReviewing] = useState(false);
   // Chặn bấm nhiều lần trong lúc gọi API.
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -147,6 +147,39 @@ export default function StudyNoteCard({
       ) : (
         <>
           <h2 className="panel-title">{note.title}</h2>
+                    {note.source_status === "needs_review" && (
+            <div
+              role="status"
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 8,
+                backgroundColor: "#fffbeb",
+                color: "#92400e",
+                border: "1px solid #fde68a",
+              }}
+            >
+              <strong>Cần xem lại ghi chú</strong>
+              <p style={{ margin: "6px 0 0" }}>
+                Nội dung nguồn hiện tại ở v{note.current_version} khác
+                với bản v{note.reviewed_version} bạn đã kiểm tra.
+                Hãy mở tài liệu nguồn để xem lại kiến thức đã ghi.
+              </p>
+            </div>
+          )}
+
+          {note.source_status === "up_to_date" && (
+            <p role="status" style={{ color: "#166534" }}>
+              Nội dung nguồn không thay đổi so với lần kiểm tra gần nhất.
+            </p>
+          )}
+
+          {note.source_status === "source_processing" && (
+            <p role="status" className="muted">
+              Nguồn chưa sẵn sàng để đối chiếu. Hãy kiểm tra trạng thái
+              xử lý của tài liệu rồi tải lại trang.
+            </p>
+          )}
 
           <p className="muted">
             Nguồn lúc tạo: v{note.source_version}
@@ -171,14 +204,17 @@ export default function StudyNoteCard({
               Mở tài liệu nguồn →
             </Link>
           ) : (
-            <p className="muted">Tài liệu nguồn đã bị xóa.</p>
+                        <p className="muted">
+              Không thể truy cập tài liệu nguồn: tài liệu có thể đã
+              bị xóa hoặc bạn không còn quyền xem. Ghi chú vẫn được giữ lại.
+            </p>
           )}
 
-          <div className="row-actions" style={{ marginTop: 16 }}>
+                    <div className="row-actions" style={{ marginTop: 16 }}>
             <Button
               type="button"
               variant="secondary"
-              disabled={busy}
+              disabled={busy || reviewing}
               onClick={startEditing}
             >
               Sửa
@@ -187,12 +223,34 @@ export default function StudyNoteCard({
             <Button
               type="button"
               variant="danger"
-              disabled={busy}
+              disabled={busy || reviewing}
               onClick={handleDelete}
             >
               {busy ? "Đang xóa..." : "Xóa"}
             </Button>
+
+            {note.source_status === "needs_review" && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy || reviewing}
+                onClick={() => setReviewing(true)}
+              >
+                Đối chiếu nguồn
+              </Button>
+            )}
           </div>
+
+          {reviewing && (
+            <StudyNoteReviewPanel
+              noteId={note.id}
+              onClose={() => setReviewing(false)}
+              onReviewed={(updated) => {
+                onUpdated(updated);
+                setReviewing(false);
+              }}
+            />
+          )}
         </>
       )}
     </article>

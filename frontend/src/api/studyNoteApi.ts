@@ -10,6 +10,12 @@ export interface StudyNote {
   reviewed_version: number;
   created_at: string;
   updated_at: string;
+  current_version: number | null;
+  source_status:
+    | "up_to_date"
+    | "needs_review"
+    | "source_processing"
+    | "source_unavailable";
 }
 
 // Dữ liệu frontend cần gửi khi tạo ghi chú.
@@ -20,6 +26,16 @@ interface CreateStudyNote {
   title: string;
   content: string;
 }
+
+
+export interface StudyNoteComparison {
+  before_version: number;
+  current_version: number;
+  before_text: string;
+  after_text: string;
+  source_token: string;
+}
+
 
 export const studyNoteApi = {
   // Lấy từng trang, mỗi trang 20 ghi chú.
@@ -51,6 +67,25 @@ export const studyNoteApi = {
   delete(id: number): Promise<unknown> {
     return request(`/study-notes/${id}`, {
       method: "DELETE",
+    });
+  },
+  
+    compare(id: number): Promise<StudyNoteComparison> {
+    return request<StudyNoteComparison>(
+      `/study-notes/${id}/comparison`,
+    );
+  },
+
+  review(
+    id: number,
+    data: {
+      expected_version: number;
+      source_token: string;
+    },
+  ): Promise<StudyNote> {
+    return request<StudyNote>(`/study-notes/${id}/review`, {
+      method: "POST",
+      body: data,
     });
   },
 };
