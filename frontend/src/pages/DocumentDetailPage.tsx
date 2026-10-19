@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { FileText } from "lucide-react";
+import StudyNoteForm from "../components/StudyNoteForm";
 
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
@@ -375,6 +376,12 @@ const handleClassify = async () => {
 
       {error && <div className="alert alert-error">{error}</div>}
       <div className="doc-detail-body-grid">
+        {document.id === docId && previewVersion == null && (
+      <StudyNoteForm
+        key={`${document.id}-${document.current_version}`}
+        document={document}
+      />
+)}
   {/* Cột trái: preview + nội dung trích xuất */}
   <div className="doc-detail-column">
     <section className="panel doc-preview-panel">

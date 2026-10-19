@@ -6,7 +6,7 @@ from app.api.routes import admin, audit, auth, chat, documents, folders, search,
 from app.core.config import settings
 from app.database.connection import SessionLocal
 from app import models  # noqa: F401
-
+from app.api.routes import study_notes
 
 # Tạo ứng dụng FastAPI chính cho hệ thống
 app = FastAPI(
@@ -37,7 +37,9 @@ api_router.include_router(documents.router)
 api_router.include_router(audit.router)
 api_router.include_router(search.router)
 api_router.include_router(chat.router)
+api_router.include_router(study_notes.router)
 app.include_router(api_router)
+
 
 
 # Endpoint gốc kiểm tra API hoạt động
