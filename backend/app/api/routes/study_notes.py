@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 import unicodedata
 import hashlib
 
+from typing import Literal
 from app.api.dependencies import get_current_user
 from app.database.connection import get_db
 from app.models.document import Document
@@ -94,19 +95,60 @@ def describe_note(db: Session, note: StudyNote, user: User):
 def list_notes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    source_filter: Literal["all", "needs_review"] = Query("all"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    notes = db.scalars(
+    query = (
         select(StudyNote)
         .where(StudyNote.user_id == user.id)
         .order_by(StudyNote.created_at.desc(), StudyNote.id.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    ).all()
+    )
 
-    return [describe_note(db, note, user) for note in notes]
+    # Không lọc: phân trang trực tiếp như trước.
+    if source_filter == "all":
+        notes = db.scalars(
+            query.offset((page - 1) * page_size).limit(page_size)
+        ).all()
 
+        return [describe_note(db, note, user) for note in notes]
+
+    # Có lọc: kiểm tra trạng thái trước khi tính vị trí trang.
+    # Đọc từng đợt để không nạp toàn bộ văn bản vào bộ nhớ.
+    skip = (page - 1) * page_size
+    matched = 0
+    result = []
+    batch_size = 50
+    offset = 0
+
+    while True:
+        notes = db.scalars(
+            query.offset(offset).limit(batch_size)
+        ).all()
+
+        if not notes:
+            break
+
+        for note in notes:
+            item = describe_note(db, note, user)
+
+            if item["source_status"] != "needs_review":
+                continue
+
+            if matched >= skip:
+                result.append(item)
+
+            matched += 1
+
+            if len(result) == page_size:
+                return result
+
+        offset += len(notes)
+
+        if len(notes) < batch_size:
+            break
+
+    return result
 
 
 @router.post("", response_model=StudyNoteRead, status_code=201)

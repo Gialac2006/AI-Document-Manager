@@ -36,12 +36,15 @@ export interface StudyNoteComparison {
   source_token: string;
 }
 
-
+export type StudyNoteFilter = "all" | "needs_review";
 export const studyNoteApi = {
   // Lấy từng trang, mỗi trang 20 ghi chú.
-  list(page = 1): Promise<StudyNote[]> {
+    list(
+    page = 1,
+    sourceFilter: StudyNoteFilter = "all",
+  ): Promise<StudyNote[]> {
     return request<StudyNote[]>(
-      `/study-notes?page=${page}&page_size=20`,
+      `/study-notes?page=${page}&page_size=20&source_filter=${sourceFilter}`,
     );
   },
 
@@ -69,7 +72,7 @@ export const studyNoteApi = {
       method: "DELETE",
     });
   },
-  
+
     compare(id: number): Promise<StudyNoteComparison> {
     return request<StudyNoteComparison>(
       `/study-notes/${id}/comparison`,

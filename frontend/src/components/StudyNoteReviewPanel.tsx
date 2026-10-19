@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
 import { studyNoteApi } from "../api/studyNoteApi";
 import type {
   StudyNote,
@@ -13,6 +12,90 @@ interface Props {
   onClose: () => void;
 }
 
+type DiffLine = {
+  text: string;
+  changed: boolean;
+};
+
+function compareLines(before: string, after: string): {
+  beforeLines: DiffLine[];
+  afterLines: DiffLine[];
+  limited: boolean;
+} {
+  const beforeLines = before.split(/\r\n|\n|\r/);
+  const afterLines = after.split(/\r\n|\n|\r/);
+
+  // Giới hạn khối lượng tính toán cho tài liệu dài.
+  if (
+    beforeLines.length * afterLines.length > 1_000_000 ||
+    beforeLines.length + afterLines.length > 10_000
+  ) {
+    return {
+      beforeLines: beforeLines.map((text) => ({
+        text,
+        changed: false,
+      })),
+      afterLines: afterLines.map((text) => ({
+        text,
+        changed: false,
+      })),
+      limited: true,
+    };
+  }
+
+  const normalize = (text: string) =>
+    text.normalize("NFC").trim().replace(/\s+/g, " ");
+
+  const oldKeys = beforeLines.map(normalize);
+  const newKeys = afterLines.map(normalize);
+
+  // Tìm các dòng chung theo đúng thứ tự xuất hiện.
+  const table = Array.from(
+    { length: beforeLines.length + 1 },
+    () => new Uint32Array(afterLines.length + 1),
+  );
+
+  for (let i = beforeLines.length - 1; i >= 0; i--) {
+    for (let j = afterLines.length - 1; j >= 0; j--) {
+      table[i][j] =
+        oldKeys[i] === newKeys[j]
+          ? table[i + 1][j + 1] + 1
+          : Math.max(table[i + 1][j], table[i][j + 1]);
+    }
+  }
+
+  const oldResult = beforeLines.map((text) => ({
+    text,
+    changed: true,
+  }));
+  const newResult = afterLines.map((text) => ({
+    text,
+    changed: true,
+  }));
+
+  let i = 0;
+  let j = 0;
+
+  while (i < beforeLines.length && j < afterLines.length) {
+    if (oldKeys[i] === newKeys[j]) {
+      oldResult[i].changed = false;
+      newResult[j].changed = false;
+      i++;
+      j++;
+    } else if (table[i + 1][j] >= table[i][j + 1]) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+
+  return {
+    beforeLines: oldResult,
+    afterLines: newResult,
+    limited: false,
+  };
+}
+
 export default function StudyNoteReviewPanel({
   noteId,
   onReviewed,
@@ -24,6 +107,14 @@ export default function StudyNoteReviewPanel({
   const [saving, setSaving] = useState(false);
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState("");
+  const diff = useMemo(() => {
+    if (!comparison) return null;
+
+    return compareLines(
+      comparison.before_text,
+      comparison.after_text,
+    );
+  }, [comparison]);
 
   useEffect(() => {
     let active = true;
@@ -103,10 +194,49 @@ export default function StudyNoteReviewPanel({
 
       {comparison && (
         <>
-          <p className="muted">
+                    <p className="muted">
             So sánh nguồn ở lần kiểm tra gần nhất với nguồn hiện tại.
-            Nội dung được hiển thị đầy đủ, chưa tô màu từng đoạn thay đổi.
+            Dòng được sửa sẽ xuất hiện dưới dạng xóa ở bên trái và
+            thêm ở bên phải.
           </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+              margin: "12px 0",
+            }}
+          >
+            <span
+              style={{
+                background: "#fee2e2",
+                color: "#991b1b",
+                padding: "4px 8px",
+                borderRadius: 4,
+              }}
+            >
+              − Nội dung bị xóa hoặc thay thế
+            </span>
+
+            <span
+              style={{
+                background: "#dcfce7",
+                color: "#166534",
+                padding: "4px 8px",
+                borderRadius: 4,
+              }}
+            >
+              + Nội dung được thêm hoặc thay thế
+            </span>
+          </div>
+
+          {diff?.limited && (
+            <p role="status" className="muted">
+              Tài liệu có quá nhiều dòng để tô màu trong bản hiện tại.
+              Hai cột bên dưới vẫn hiển thị đầy đủ nội dung để đối chiếu.
+            </p>
+          )}
 
           <div
             style={{
@@ -121,44 +251,108 @@ export default function StudyNoteReviewPanel({
               <h4>
                 Lần kiểm tra trước — v{comparison.before_version}
               </h4>
-              <pre
+
+              <div
+                tabIndex={0}
+                aria-label="Nội dung nguồn lần kiểm tra trước"
                 style={{
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
                   maxHeight: 400,
                   overflowY: "auto",
-                  padding: 12,
                   border: "1px solid #e5e7eb",
                   borderRadius: 8,
                   background: "#f9fafb",
-                  fontFamily: "inherit",
                   fontSize: 14,
                 }}
               >
-                {comparison.before_text}
-              </pre>
+                {diff?.beforeLines.map((line, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      padding: "3px 8px",
+                      background: line.changed
+                        ? "#fee2e2"
+                        : "transparent",
+                      color: line.changed ? "#991b1b" : "inherit",
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 20,
+                        flexShrink: 0,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {line.changed ? "−" : ""}
+                    </span>
+                    <span
+                      style={{
+                        minWidth: 0,
+                        whiteSpace: "pre-wrap",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {line.text || "\u00a0"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={{ minWidth: 0 }}>
               <h4>
                 Nguồn hiện tại — v{comparison.current_version}
               </h4>
-              <pre
+
+              <div
+                tabIndex={0}
+                aria-label="Nội dung nguồn hiện tại"
                 style={{
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
                   maxHeight: 400,
                   overflowY: "auto",
-                  padding: 12,
                   border: "1px solid #e5e7eb",
                   borderRadius: 8,
                   background: "#f9fafb",
-                  fontFamily: "inherit",
                   fontSize: 14,
                 }}
               >
-                {comparison.after_text}
-              </pre>
+                {diff?.afterLines.map((line, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      padding: "3px 8px",
+                      background: line.changed
+                        ? "#dcfce7"
+                        : "transparent",
+                      color: line.changed ? "#166534" : "inherit",
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 20,
+                        flexShrink: 0,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {line.changed ? "+" : ""}
+                    </span>
+                    <span
+                      style={{
+                        minWidth: 0,
+                        whiteSpace: "pre-wrap",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {line.text || "\u00a0"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -181,10 +181,19 @@ export default function StudyNoteCard({
             </p>
           )}
 
-          <p className="muted">
+            <p className="muted">
             Nguồn lúc tạo: v{note.source_version}
             {" · "}
-            Cập nhật: {formatDate(note.updated_at)}
+            Đã xem lại: v{note.reviewed_version}
+            {" · "}
+            Nguồn hiện tại:{" "}
+            {note.current_version !== null
+              ? `v${note.current_version}`
+              : "Không truy cập được"}
+          </p>
+
+          <p className="muted">
+            Cập nhật ghi chú: {formatDate(note.updated_at)}
           </p>
 
           <p
