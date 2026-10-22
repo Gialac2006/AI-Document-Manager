@@ -1,5 +1,13 @@
 from datetime import datetime
-
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,6 +29,12 @@ class DocumentVersion(Base):
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+        # Văn bản trích xuất riêng của phiên bản này.
+    # None nghĩa là chưa có bản văn bản được lưu.
+    extracted_text: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
