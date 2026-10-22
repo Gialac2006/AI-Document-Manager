@@ -1,5 +1,7 @@
 from fastapi import UploadFile
+from sqlalchemy import select
 
+from app.models.document_version import DocumentVersion
 from app.core.exceptions import BadRequestError, ForbiddenError
 from app.models.document import Document
 from app.models.user import User
@@ -78,7 +80,43 @@ def _run_ai_pipeline(document: Document, page_texts: list[str] | None = None) ->
     )
 
 
+def _save_version_text(
+    db,
+    *,
+    version_id: int,
+    extracted_text: str,
+):
+    # Khóa đúng bản ghi phiên bản đang được xử lý.
+    version = db.scalar(
+        select(DocumentVersion)
+        .where(DocumentVersion.id == version_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+    if version is None:
+        raise BadRequestError("Phiên bản tài liệu không còn tồn tại")
+
+    # Giữ bản văn bản đã lưu để lịch sử đối chiếu ổn định.
+    if version.extracted_text is None:
+        version.extracted_text = extracted_text
+        db.flush()
+
+
 def _run_text_extraction(db, document: Document, file_path: str) -> Document:
+        # Chốt đúng phiên bản và file trước khi bắt đầu xử lý.
+    version_id = db.scalar(
+        select(DocumentVersion.id).where(
+            DocumentVersion.document_id == document.id,
+            DocumentVersion.version == document.current_version,
+            DocumentVersion.file_path == file_path,
+        )
+    )
+
+    if version_id is None:
+        raise BadRequestError(
+            "Không tìm thấy phiên bản khớp với file cần xử lý"
+        )
     document = document_repository.update_processing(
         db,
         document,
@@ -88,6 +126,11 @@ def _run_text_extraction(db, document: Document, file_path: str) -> Document:
     try:
         full_path = storage_service.get_full_path(file_path)
         extracted_text, page_texts = extract_text_with_pages(full_path)
+        _save_version_text(
+            db,
+            version_id=version_id,
+            extracted_text=extracted_text,
+        )
         document = document_repository.update_processing(
             db,
             document,
@@ -113,6 +156,8 @@ def _run_text_extraction(db, document: Document, file_path: str) -> Document:
             processing_error=f"Chunking/Embedding: {error}",
             extracted_text=document.extracted_text,
         )
+    except Exception as error:
+        db.rollback()
 
     return document_repository.update_processing(
         db,

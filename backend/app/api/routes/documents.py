@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.api.dependencies import get_current_user
 from app.core.exceptions import NotFoundError
@@ -415,3 +416,39 @@ def document_audit_logs(
         db, document_id=document_id, current_user=current_user
     )
     return audit_log_repository.list_by_document(db, document_id)
+
+
+@router.get("/{document_id}/versions/{version_number}/text")
+def get_document_version_text(
+    document_id: int,
+    version_number: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Kiểm tra quyền hiện tại trước khi cho đọc lịch sử nguồn.
+    document_service.get_document(
+        db,
+        document_id=document_id,
+        current_user=current_user,
+    )
+
+    version = document_repository.get_version(
+        db,
+        document_id,
+        version_number,
+    )
+
+    if version is None:
+        raise HTTPException(404, "Không tìm thấy phiên bản tài liệu")
+
+    if version.extracted_text is None:
+        raise HTTPException(
+            409,
+            "Phiên bản này chưa có văn bản trích xuất được lưu.",
+        )
+
+    return {
+        "document_id": document_id,
+        "version": version.version,
+        "extracted_text": version.extracted_text,
+    }
