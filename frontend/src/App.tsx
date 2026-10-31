@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-
+import NotificationsPage from "./pages/NotificationsPage";
 import StudyNotesPage from "./pages/StudyNotesPage";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import MainLayout from "./layouts/MainLayout.tsx";
@@ -57,6 +57,7 @@ function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/study-notes" element={<StudyNotesPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
         {/* Nhóm route admin: chỉ super_admin và manager truy cập được */}
         <Route
           path="/admin"

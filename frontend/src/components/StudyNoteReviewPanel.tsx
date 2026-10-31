@@ -17,7 +17,7 @@ type DiffLine = {
   changed: boolean;
 };
 
-function compareLines(before: string, after: string): {
+export function compareLines(before: string, after: string): {
   beforeLines: DiffLine[];
   afterLines: DiffLine[];
   limited: boolean;

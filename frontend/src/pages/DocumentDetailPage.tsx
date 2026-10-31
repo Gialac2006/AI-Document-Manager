@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { FileText } from "lucide-react";
 import StudyNoteForm from "../components/StudyNoteForm";
-
+import DocumentChangesPanel from "../components/DocumentChangesPanel";
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
 import { userApi } from "../api/userApi";
@@ -375,13 +375,16 @@ const handleClassify = async () => {
 </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+      
+      {document.id === docId && (
+        <DocumentChangesPanel
+          key={document.id}
+          documentId={document.id}
+        />
+      )}
+
       <div className="doc-detail-body-grid">
-        {document.id === docId && previewVersion == null && (
-      <StudyNoteForm
-        key={`${document.id}-${document.current_version}`}
-        document={document}
-      />
-)}
+    
   {/* Cột trái: preview + nội dung trích xuất */}
   <div className="doc-detail-column">
     <section className="panel doc-preview-panel">
@@ -424,14 +427,12 @@ const handleClassify = async () => {
       )}
     </section>
 
+        {/* Nội dung trích xuất */}
     {procStatus.cls === "indexed" && (
       <section className="panel doc-extracted-panel">
         <div className="doc-section-header">
           <div>
-            <h2 className="panel-title">
-              Nội dung trích xuất
-            </h2>
-
+            <h2 className="panel-title">Nội dung trích xuất</h2>
             <p className="doc-section-desc">
               Nội dung văn bản được lấy từ tài liệu.
             </p>
@@ -451,18 +452,54 @@ const handleClassify = async () => {
         </div>
 
         {textError && (
-          <div className="alert alert-error">
-            {textError}
-          </div>
+          <div className="alert alert-error">{textError}</div>
         )}
 
         {showExtracted && extractedText ? (
-          <pre className="extracted-text">
-            {extractedText}
-          </pre>
+          <pre className="extracted-text">{extractedText}</pre>
         ) : (
           <div className="doc-content-placeholder">
             Chọn “Xem nội dung” để hiển thị văn bản đã trích xuất.
+          </div>
+        )}
+      </section>
+    )}
+
+    {/* Tóm tắt là một ô riêng, nằm dưới nội dung trích xuất */}
+    {procStatus.cls === "indexed" && (
+      <section className="panel doc-summary-panel">
+        <div className="doc-section-header">
+          <div>
+            <h2 className="panel-title">Tóm tắt tài liệu</h2>
+            <p className="doc-section-desc">
+              Nắm nhanh các nội dung chính của tài liệu.
+            </p>
+          </div>
+
+          <Button
+            variant="primary"
+            onClick={handleSummary}
+            disabled={summaryLoading}
+          >
+            {summaryLoading
+              ? "Đang tóm tắt..."
+              : summary
+                ? "Tóm tắt lại"
+                : "Tóm tắt"}
+          </Button>
+        </div>
+
+        {summaryError && (
+          <div className="alert alert-error">{summaryError}</div>
+        )}
+
+        {summary ? (
+          <div className="ai-summary">
+            <ReactMarkdown>{summary}</ReactMarkdown>
+          </div>
+        ) : (
+          <div className="doc-content-placeholder">
+            Chưa có bản tóm tắt cho tài liệu này.
           </div>
         )}
       </section>
@@ -471,6 +508,12 @@ const handleClassify = async () => {
 
   {/* Cột phải: thông tin + tóm tắt + phiên bản */}
   <div className="doc-detail-column">
+    {document.id === docId && previewVersion == null && (
+  <StudyNoteForm
+    key={`${document.id}-${document.current_version}`}
+    document={document}
+  />
+)}
     <section className="panel doc-info-panel">
       <div className="doc-section-header">
         <h2 className="panel-title">
@@ -652,51 +695,7 @@ const handleClassify = async () => {
       )}
     </section>
 
-    {procStatus.cls === "indexed" && (
-      <section className="panel doc-summary-panel">
-        <div className="doc-section-header">
-          <div>
-            <h2 className="panel-title">
-              Tóm tắt tài liệu
-            </h2>
-
-            <p className="doc-section-desc">
-              Nắm nhanh các nội dung chính của tài liệu.
-            </p>
-          </div>
-
-          <Button
-            variant="primary"
-            onClick={handleSummary}
-            disabled={summaryLoading}
-          >
-            {summaryLoading
-              ? "Đang tóm tắt..."
-              : summary
-                ? "Tóm tắt lại"
-                : "Tóm tắt"}
-          </Button>
-        </div>
-
-        {summaryError && (
-          <div className="alert alert-error">
-            {summaryError}
-          </div>
-        )}
-
-        {summary ? (
-          <div className="ai-summary">
-            <ReactMarkdown>
-              {summary}
-            </ReactMarkdown>
-          </div>
-        ) : (
-          <div className="doc-content-placeholder">
-            Chưa có bản tóm tắt cho tài liệu này.
-          </div>
-        )}
-      </section>
-    )}
+    
 
     <section className="panel doc-version-panel">
       <h2 className="panel-title">

@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 
+import { notificationApi } from "../api/notificationApi";
 import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
 import DocumentCard from "../components/DocumentCard.tsx";
@@ -30,7 +31,60 @@ export default function DocumentsPage() {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+
   const [categoryFilter, setCategoryFilter] = useState("");
+    const [pendingChanges, setPendingChanges] =
+    useState<Record<number, number>>({});
+  const [changesError, setChangesError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    let fetching = false;
+
+    async function loadChanges() {
+      if (fetching) return;
+      fetching = true;
+
+      try {
+        const data = await notificationApi.documentChanges();
+        if (!active) return;
+
+        setPendingChanges(
+          Object.fromEntries(
+            data.map((item) => [item.document_id, item.pending_count]),
+          ),
+        );
+        setChangesError("");
+      } catch (err) {
+        if (active) {
+          setChangesError(
+            err instanceof Error
+              ? err.message
+              : "Không thể kiểm tra thay đổi tài liệu.",
+          );
+        }
+      } finally {
+        fetching = false;
+      }
+    }
+
+    void loadChanges();
+
+    const onFocus = () => void loadChanges();
+    window.addEventListener("focus", onFocus);
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void loadChanges();
+      }
+    }, 10000);
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const loadData = useCallback(
     async (folderId: number | null, targetPage = 1, append = false) => {
@@ -141,6 +195,11 @@ export default function DocumentsPage() {
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+            {changesError && (
+        <p role="alert" style={{ color: "#92400e" }}>
+          Chưa cập nhật được dấu báo thay đổi: {changesError}
+        </p>
+      )}
 
       <div className="documents-layout">
         <aside className="documents-sidebar">
@@ -231,6 +290,7 @@ export default function DocumentsPage() {
                     key={doc.id}
                     document={doc}
                     onDelete={handleDelete}
+                    pendingChanges={pendingChanges[doc.id] ?? 0}
                   />
                 ))}
               </div>
