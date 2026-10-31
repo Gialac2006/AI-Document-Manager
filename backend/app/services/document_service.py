@@ -1,6 +1,9 @@
 from fastapi import UploadFile
 from sqlalchemy import select
 
+from app.services.document_notification_service import (
+    create_version_notifications,
+)
 from app.models.document_version import DocumentVersion
 from app.core.exceptions import BadRequestError, ForbiddenError
 from app.models.document import Document
@@ -86,7 +89,6 @@ def _save_version_text(
     version_id: int,
     extracted_text: str,
 ):
-    # Khóa đúng bản ghi phiên bản đang được xử lý.
     version = db.scalar(
         select(DocumentVersion)
         .where(DocumentVersion.id == version_id)
@@ -97,10 +99,12 @@ def _save_version_text(
     if version is None:
         raise BadRequestError("Phiên bản tài liệu không còn tồn tại")
 
-    # Giữ bản văn bản đã lưu để lịch sử đối chiếu ổn định.
+    # Chỉ lưu và tạo thông báo lần đầu trích xuất thành công.
     if version.extracted_text is None:
         version.extracted_text = extracted_text
         db.flush()
+
+        create_version_notifications(db, version=version)
 
 
 def _run_text_extraction(db, document: Document, file_path: str) -> Document:
@@ -138,6 +142,7 @@ def _run_text_extraction(db, document: Document, file_path: str) -> Document:
             extracted_text=extracted_text,
         )
     except Exception as error:
+        db.rollback()
         return document_repository.update_processing(
             db,
             document,
@@ -156,8 +161,6 @@ def _run_text_extraction(db, document: Document, file_path: str) -> Document:
             processing_error=f"Chunking/Embedding: {error}",
             extracted_text=document.extracted_text,
         )
-    except Exception as error:
-        db.rollback()
 
     return document_repository.update_processing(
         db,

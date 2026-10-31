@@ -9,10 +9,15 @@ import { formatDate } from "../utils/format";
 interface DocumentCardProps {
   document: Document;
   onDelete: (id: number) => void;
+  pendingChanges?: number;
 }
 
 // Component thẻ hiển thị 1 tài liệu trong danh sách
-export default function DocumentCard({ document, onDelete }: DocumentCardProps) {
+export default function DocumentCard({
+  document,
+  onDelete,
+  pendingChanges = 0,
+}: DocumentCardProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "super_admin";
   const canDelete = isAdmin || normalizeAccessLevel(document.access_level) === "manage";
@@ -26,6 +31,32 @@ export default function DocumentCard({ document, onDelete }: DocumentCardProps) 
         <Link to={`/documents/${document.id}`} className="document-card-title">
           {document.title}
         </Link>
+                {pendingChanges > 0 && (
+          <Link
+            to={`/documents/${document.id}`}
+            title={`${pendingChanges} lần cập nhật chưa đối chiếu`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginLeft: 10,
+              color: "#b91c1c",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#dc2626",
+              }}
+            />
+            Có thay đổi ({pendingChanges})
+          </Link>
+        )}
         <div className="document-card-meta">
           <span>{document.file_name}</span>
           <span>🕒 {formatDate(document.updated_at)}</span>

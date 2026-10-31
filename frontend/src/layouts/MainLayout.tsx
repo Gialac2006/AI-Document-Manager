@@ -12,6 +12,7 @@ import {
   UserRound,
   LogOut,
   NotebookPen,
+  Bell,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -55,6 +56,11 @@ const NAV_GROUPS: NavGroup[] = [
       label: "Ghi chú học tập",
       icon: NotebookPen,
     },
+    {
+      to: "/notifications",
+      label: "Thông báo",
+      icon: Bell,
+    },
   ],
 },
   {
@@ -85,6 +91,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/tenants": "Quản lý tổ chức",
   "/admin/audit-logs": "Nhật ký hoạt động",
   "/study-notes": "Ghi chú học tập",
+  "/notifications": "Thông báo",
 };
 
 // Lấy chữ cái đầu của họ tên để hiển thị avatar

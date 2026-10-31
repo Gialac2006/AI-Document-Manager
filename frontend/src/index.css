@@ -3767,3 +3767,83 @@ body {
   padding: 3px 7px;
   font-size: 12px;
 }
+.doc-detail-body-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.doc-detail-body-grid > .doc-detail-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.doc-detail-body-grid > .doc-detail-column > * {
+  min-width: 0;
+  margin: 0;
+}
+
+.doc-detail-body-grid .panel {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.doc-info-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc-info-actions,
+.row-actions-compact {
+  flex-wrap: wrap;
+}
+
+.doc-version-panel {
+  overflow-x: auto;
+}
+
+.doc-version-panel .row-actions-compact button {
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .doc-detail-body-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Hai cột cao bằng nhau */
+.doc-detail-body-grid {
+  align-items: stretch;
+}
+
+/* Ô tóm tắt dùng phần chiều cao còn lại của cột trái */
+.doc-detail-body-grid .doc-summary-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.doc-detail-body-grid .doc-summary-panel .ai-summary {
+  flex: 1 1 0;
+  min-height: 200px;
+  max-height: none;
+  overflow-y: auto;
+}
+
+/* Khi chuyển về một cột, dùng lại chiều cao gọn */
+@media (max-width: 1000px) {
+  .doc-detail-body-grid .doc-summary-panel {
+    flex: none;
+  }
+
+  .doc-detail-body-grid .doc-summary-panel .ai-summary {
+    flex: none;
+    min-height: 0;
+    max-height: 400px;
+  }
+}
