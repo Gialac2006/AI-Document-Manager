@@ -1,0 +1,28 @@
+.profile-wrap.account-profile { max-width: 1100px; margin: 0 auto; }
+.account-profile-description { margin: 0 0 24px; color: var(--color-muted); }
+.account-profile .profile-card { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; box-shadow: none; overflow: hidden; }
+.account-profile .profile-head { display: flex; align-items: center; gap: 20px; padding: 24px; margin: 0; border-bottom: 1px solid var(--color-border); }
+.account-profile .profile-avatar { width: 64px; height: 64px; margin: 0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #eff6ff; color: #2563eb; border: none; border-radius: 50%; box-shadow: none; font-size: 24px; }
+.account-profile .profile-head-text { min-width: 0; padding: 0; }
+.account-profile .profile-name { margin: 0 0 4px; font-size: 22px; overflow-wrap: anywhere; }
+.account-profile .profile-email { margin: 0 0 10px; overflow-wrap: anywhere; color: var(--color-muted); }
+.account-profile .profile-form { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.account-profile-section h2 { display: flex; align-items: center; gap: 8px; font-size: 16px; margin: 0 0 16px; }
+.account-profile-section h2 svg { color: #64748b; }
+.account-profile-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.account-profile .form-group { margin: 0; min-width: 0; }
+.account-profile .form-group label { display: block; margin-bottom: 8px; font-size: 14px; }
+.account-profile .form-group input { width: 100%; min-width: 0; box-sizing: border-box; }
+.account-profile-help { color: var(--color-muted); font-size: 13px; margin: -4px 0 16px; }
+.account-profile .profile-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 16px; background: #f8fafc; border: 1px solid var(--color-border); border-radius: 8px; }
+.account-profile .profile-meta-item { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.account-profile .profile-meta-value { overflow-wrap: anywhere; font-size: 13px; }
+.account-profile .profile-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 0; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.account-profile .profile-actions > button, .account-profile .profile-actions > a { width: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.account-profile .profile-actions > a { margin-left: auto; }
+.account-profile button:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 700px) {
+  .account-profile-fields { grid-template-columns: minmax(0, 1fr); }
+  .account-profile .profile-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .account-profile .profile-head, .account-profile .profile-form { padding: 16px; }
+}

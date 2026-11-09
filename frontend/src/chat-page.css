@@ -1,0 +1,68 @@
+.document-chat-page { min-width: 0; }
+.document-chat-description { margin: 0 0 24px; color: var(--color-muted); }
+.document-chat-grid { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; height: clamp(500px, calc(100dvh - 230px), 900px); }
+.document-chat-grid > .panel { margin: 0; min-width: 0; min-height: 0; box-shadow: none; }
+.document-chat-sidebar { display: flex; flex-direction: column; padding: 16px; gap: 16px; }
+.document-chat-page button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.document-chat-page button:disabled { opacity: .55; cursor: not-allowed; }
+.document-chat-page h2 { margin: 0; font-size: 16px; line-height: 1.5; }
+.document-chat-sidebar > h2 { font-size: 13px; color: var(--color-muted); }
+.document-chat-sidebar > button { flex-shrink: 0; }
+.document-chat-history { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.document-chat-history > button { width: 100%; justify-content: flex-start; text-align: left; border: 1px solid transparent; border-radius: 8px; padding: 12px; background: transparent; color: var(--color-text); cursor: pointer; font: inherit; font-size: 14px; }
+.document-chat-history > button svg { flex-shrink: 0; color: #64748b; }
+.document-chat-history > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.document-chat-history > button:hover { background: #f8fafc; }
+.document-chat-history > button.is-active { color: #2563eb; background: #eff6ff; border-color: #dbeafe; }
+.document-chat-main { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.document-chat-window { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; }
+.document-chat-empty { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; color: #64748b; }
+.document-chat-empty p { margin: 0; max-width: 420px; }
+.document-chat-empty h2 { color: var(--color-heading); }
+.document-chat-message { max-width: 90%; width: fit-content; margin-bottom: 20px; }
+.document-chat-message.is-user { margin-left: auto; }
+.document-chat-speaker { display: block; margin-bottom: 6px; font-size: 12px; color: var(--color-muted); }
+.is-user .document-chat-speaker { text-align: right; }
+.document-chat-content { border-radius: 12px; padding: 14px 16px; background: #f8fafc; line-height: 1.7; overflow-wrap: anywhere; }
+.is-user .document-chat-content { background: #eff6ff; color: #1e3a8a; white-space: pre-wrap; }
+.document-chat-content p { margin: 0 0 12px; }
+.document-chat-content > :last-child { margin-bottom: 0; }
+.document-chat-content pre { overflow-x: auto; max-width: 100%; padding: 12px; background: #e2e8f0; border-radius: 6px; }
+.document-chat-content ul, .document-chat-content ol { padding-left: 22px; }
+.document-chat-muted { color: var(--color-muted); font-size: 13px; margin: 0; }
+.document-chat-composer { flex-shrink: 0; border-top: 1px solid var(--color-border); padding: 16px 20px; }
+.document-chat-input-label { display: block; font-size: 13px; margin-bottom: 8px; }
+.document-chat-input-row { display: flex; align-items: flex-end; gap: 12px; }
+.document-chat-input-row textarea { flex: 1; min-width: 0; resize: vertical; min-height: 64px; max-height: 160px; }
+.document-chat-input-row > button { width: auto; flex-shrink: 0; }
+.document-chat-error { padding: 12px 20px; color: #b91c1c; background: #fef2f2; overflow-wrap: anywhere; }
+@media (max-width: 1000px) {
+  .document-chat-grid { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .document-chat-sidebar { max-height: 240px; }
+  .document-chat-main { height: 65dvh; min-height: 420px; }
+  .document-chat-sidebar > button { width: auto; align-self: flex-start; }
+}
+@media (max-width: 600px) {
+  .document-chat-window { padding: 16px; }
+  .document-chat-composer { padding: 12px; }
+  .document-chat-message { max-width: 100%; }
+}
+
+/* Đồng bộ ô nhập với các biểu mẫu còn lại. */
+.document-chat-input-row textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border, #dbe1e8);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+.document-chat-input-row textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px #dbeafe;
+}
+.document-chat-input-row textarea:disabled { background: #f8fafc; }

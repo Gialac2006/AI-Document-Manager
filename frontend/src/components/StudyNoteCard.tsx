@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Pencil, Trash2, GitCompareArrows, ArrowUpRight } from "lucide-react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import StudyNoteReviewPanel from "./StudyNoteReviewPanel";
@@ -92,7 +93,7 @@ export default function StudyNoteCard({
   }
 
   return (
-    <article className="panel" style={{ marginTop: 20 }}>
+    <article className={`panel study-note-card${editing || reviewing ? " study-note-card-expanded" : ""}`}>
       {error && (
         <div className="alert alert-error" role="alert">
           {error}
@@ -169,8 +170,8 @@ export default function StudyNoteCard({
           )}
 
           {note.source_status === "up_to_date" && (
-            <p role="status" style={{ color: "#166534" }}>
-              Nội dung nguồn không thay đổi so với lần kiểm tra gần nhất.
+            <p role="status" className="study-note-status" title="Nội dung nguồn không thay đổi so với lần kiểm tra gần nhất.">
+              Nguồn không đổi
             </p>
           )}
 
@@ -196,7 +197,7 @@ export default function StudyNoteCard({
             Cập nhật ghi chú: {formatDate(note.updated_at)}
           </p>
 
-          <p
+          <p className="study-note-content"
             style={{
               whiteSpace: "pre-wrap",
               overflowWrap: "anywhere",
@@ -205,12 +206,13 @@ export default function StudyNoteCard({
             {note.content}
           </p>
 
+          <div className="study-note-footer">
           {note.document_id !== null ? (
             <Link
               to={`/documents/${note.document_id}`}
               className="primary-link"
             >
-              Mở tài liệu nguồn →
+              Mở tài liệu nguồn <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           ) : (
                         <p className="muted">
@@ -219,14 +221,14 @@ export default function StudyNoteCard({
             </p>
           )}
 
-                    <div className="row-actions" style={{ marginTop: 16 }}>
+                    <div className="row-actions study-note-actions">
             <Button
               type="button"
               variant="secondary"
               disabled={busy || reviewing}
               onClick={startEditing}
             >
-              Sửa
+              <Pencil size={16} aria-hidden="true" /> Sửa
             </Button>
 
             <Button
@@ -235,7 +237,7 @@ export default function StudyNoteCard({
               disabled={busy || reviewing}
               onClick={handleDelete}
             >
-              {busy ? "Đang xóa..." : "Xóa"}
+              <Trash2 size={16} aria-hidden="true" /> {busy ? "Đang xóa..." : "Xóa"}
             </Button>
 
             {note.source_status === "needs_review" && (
@@ -245,9 +247,10 @@ export default function StudyNoteCard({
                 disabled={busy || reviewing}
                 onClick={() => setReviewing(true)}
               >
-                Đối chiếu nguồn
+                <GitCompareArrows size={16} aria-hidden="true" /> Đối chiếu nguồn
               </Button>
             )}
+          </div>
           </div>
 
           {reviewing && (

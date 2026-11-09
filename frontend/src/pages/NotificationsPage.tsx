@@ -4,13 +4,16 @@ import { notificationApi } from "../api/notificationApi";
 import type { DocumentNotification } from "../api/notificationApi";
 import NotificationReviewPanel from "../components/NotificationReviewPanel";
 import Button from "../components/ui/Button";
+import { Bell, RefreshCw } from "lucide-react";
+import "../notifications.css";
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<DocumentNotification[]>([]);
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [reload, setReload] = useState(0);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<DocumentNotification | null>(null);
+  const selectedId = selected?.id ?? null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -67,8 +70,7 @@ export default function NotificationsPage() {
   const controlsDisabled = loading || selectedId !== null;
 
   return (
-    <section>
-      <h1>Thông báo</h1>
+    <section className="notifications-page">
       <p className="muted">
         Theo dõi phiên bản mới của tài liệu được chia sẻ với bạn.
       </p>
@@ -84,7 +86,7 @@ export default function NotificationsPage() {
           aria-pressed={!unreadOnly}
           onClick={() => changeFilter(false)}
         >
-          {!unreadOnly ? "✓ Tất cả" : "Tất cả"}
+          Tất cả
         </Button>
 
         <Button
@@ -94,7 +96,7 @@ export default function NotificationsPage() {
           aria-pressed={unreadOnly}
           onClick={() => changeFilter(true)}
         >
-          {unreadOnly ? "✓ Chưa đọc" : "Chưa đọc"}
+          Chưa đọc
         </Button>
 
         <Button
@@ -103,9 +105,24 @@ export default function NotificationsPage() {
           disabled={controlsDisabled}
           onClick={refresh}
         >
-          Tải lại
+          <RefreshCw size={16} aria-hidden="true" /> Tải lại
         </Button>
       </div>
+
+      {selected && (
+        <article className="notification-selected">
+          <div className="notification-selected-heading">
+            <Bell size={18} aria-hidden="true" />
+            <strong>Đang đối chiếu: {selected.document_title}</strong>
+          </div>
+          <NotificationReviewPanel
+            key={selected.id}
+            notificationId={selected.id}
+            onChanged={refresh}
+            onClose={() => { setSelected(null); refresh(); }}
+          />
+        </article>
+      )}
 
       {loading ? (
         <p role="status">Đang tải thông báo...</p>
@@ -115,18 +132,22 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <>
-          {items.length === 0 && (
-            <p>
-              {unreadOnly
-                ? "Bạn không có thông báo chưa đọc."
-                : "Bạn chưa có thông báo."}
-            </p>
+          {items.length === 0 && selectedId === null && (
+            <div className="notification-empty" role="status">
+              <Bell size={24} strokeWidth={1.6} aria-hidden="true" />
+              <h2>{unreadOnly ? "Không có thông báo chưa đọc" : "Chưa có thông báo"}</h2>
+              <p className="muted">
+                {unreadOnly
+                  ? "Chọn Tất cả để xem các thông báo trước đó."
+                  : "Khi tài liệu được chia sẻ có phiên bản mới."}
+              </p>
+            </div>
           )}
 
-          {items.map((item) => (
+          {items.filter(item => item.id !== selectedId).map((item) => (
             <article
               key={item.id}
-              className="panel"
+              className="panel notification-item"
               style={{
                 padding: 16,
                 marginTop: 16,
@@ -135,6 +156,7 @@ export default function NotificationsPage() {
                 }`,
               }}
             >
+              <div className="notification-item-content">
               <h3>{item.document_title}</h3>
 
               <p>
@@ -148,11 +170,12 @@ export default function NotificationsPage() {
                 {item.reviewed_at ? "Đã đối chiếu" : "Chưa đối chiếu"}
               </p>
 
+              </div>
               <Button
                 type="button"
                 variant="secondary"
                 disabled={selectedId !== null}
-                onClick={() => setSelectedId(item.id)}
+                onClick={() => setSelected(item)}
               >
                 {item.reviewed_at ? "Xem lại đối chiếu" : "Đối chiếu"}
               </Button>
@@ -161,15 +184,8 @@ export default function NotificationsPage() {
         </>
       )}
 
-      {selectedId !== null && (
-        <NotificationReviewPanel
-          key={selectedId}
-          notificationId={selectedId}
-          onChanged={refresh}
-          onClose={() => setSelectedId(null)}
-        />
-      )}
 
+      {!loading && !error && (page > 1 || items.length >= 20) && (
       <div
         className="row-actions"
         style={{
@@ -205,6 +221,7 @@ export default function NotificationsPage() {
           Trang sau
         </Button>
       </div>
+      )}
     </section>
   );
 }

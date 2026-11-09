@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 
@@ -6,8 +6,9 @@ import { documentApi } from "../api/documentApi";
 import { folderApi } from "../api/folderApi";
 import { useAuth } from "../hooks/useAuth";
 import type { Document, Folder } from "../types";
-import { fileTypeInfo } from "../utils/documentMeta";
+import { Folder as FolderIcon, FolderOpen, Files, FileText, Pencil, Trash2, Plus, X } from "lucide-react";
 import Button from "./ui/Button.tsx";
+import "../folder-actions.css";
 
 interface FolderNode {
   id: number;
@@ -95,7 +96,7 @@ function FolderNode({
         >
           {hasChildren ? (expanded ? "▾" : "▸") : ""}
         </span>
-        <span className="folder-tree-icon">📁</span>
+        <span className="folder-tree-icon">{expanded ? <FolderOpen size={17} /> : <FolderIcon size={17} />}</span>
         {editing ? (
           <input
             className="folder-tree-edit"
@@ -120,7 +121,7 @@ function FolderNode({
               title={folder.id === pinnedId ? "Đóng danh sách file" : "Xem file trong thư mục"}
               onClick={() => onToggleFiles(folder.id)}
             >
-              📄
+              <FileText size={16} />
             </button>
             {canWrite && (
               <span className="folder-tree-row-actions">
@@ -129,14 +130,14 @@ function FolderNode({
                   onClick={() => setEditing(true)}
                   title="Đổi tên"
                 >
-                  ✏️
+                  <Pencil size={16} />
                 </Button>
                 <Button
                   variant="text"
                   onClick={() => onDelete(folder.id)}
                   title="Xoá"
                 >
-                  🗑️
+                  <Trash2 size={16} />
                 </Button>
               </span>
             )}
@@ -175,6 +176,10 @@ interface FolderTreeProps {
 export default function FolderTree({ folders, selectedId, onSelect, onChanged }: FolderTreeProps) {
   const { user } = useAuth();
   const [creating, setCreating] = useState(false);
+  const [createParent, setCreateParent] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const actionLock = useRef(false);
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
   const [pinnedId, setPinnedId] = useState<number | null>(null);
@@ -186,12 +191,16 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
   const canWrite = user?.role === "manager" || user?.role === "individual" || user?.role === "super_admin";
 
   const openCreate = () => {
+    if (actionLock.current) return;
+    setDeleteId(null);
+    setCreateParent(selectedId);
     setNewName("");
     setError("");
     setCreating(true);
   };
 
   const closeCreate = () => {
+    if (actionLock.current) return;
     setCreating(false);
     setNewName("");
     setError("");
@@ -201,17 +210,19 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
   const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const name = newName.trim();
-    if (!name) return;
+    if (!name || actionLock.current) return;
+    actionLock.current = true;
+    setBusy(true);
     try {
-      await folderApi.create({ name, parent_id: selectedId || null });
-      if (selectedId != null) expandPath(selectedId);
+      await folderApi.create({ name, parent_id: createParent });
+      if (createParent != null) expandPath(createParent);
       setNewName("");
       setError("");
       setCreating(false);
       if (onChanged) onChanged();
     } catch (err) {
       setError((err as Error).message);
-    }
+    } finally { actionLock.current = false; setBusy(false); }
   };
 
   // Đổi tên thư mục
@@ -226,16 +237,28 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
   };
 
   // Xoá thư mục sau khi xác nhận
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Xoá thư mục này và toàn bộ thư mục con?")) return;
+  const requestDelete = (id: number) => {
+    if (actionLock.current) return;
+    setCreating(false);
+    setError("");
+    setDeleteId(id);
+  };
+
+  const handleDelete = async () => {
+    if (deleteId === null || actionLock.current) return;
+    const id = deleteId;
+    actionLock.current = true;
+    setBusy(true);
+    setError("");
     try {
       await folderApi.delete(id);
-      if (pinnedId === id) closeFiles();
-      setError("");
-      if (onChanged) onChanged();
+      closeFiles();
+      onSelect(null);
+      setDeleteId(null);
+      onChanged();
     } catch (err) {
-      setError((err as Error).message);
-    }
+      setError(err instanceof Error ? err.message : "Không thể xóa thư mục.");
+    } finally { actionLock.current = false; setBusy(false); }
   };
 
   const closeFiles = () => {
@@ -306,7 +329,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
         <h3>Thư mục</h3>
         {canWrite && !creating && (
           <button type="button" className="folder-add-button" onClick={openCreate} title="Tạo thư mục">
-            ＋
+            <Plus size={18} />
           </button>
         )}
       </div>
@@ -315,7 +338,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
         onClick={() => onSelect(null)}
       >
         <span className="folder-tree-caret placeholder" role="button"></span>
-        <span className="folder-tree-icon">🗂️</span>
+        <span className="folder-tree-icon"><Files size={17} /></span>
         <span className="folder-tree-name">Tất cả tài liệu</span>
       </div>
       {tree.map((folder) => (
@@ -330,15 +353,21 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
             onSelect(id);
           }}
           onRename={handleRename}
-          onDelete={handleDelete}
+          onDelete={requestDelete}
           canWrite={canWrite}
           pinnedId={pinnedId}
           onToggleFiles={handleToggleFiles}
         />
       ))}
       {canWrite && creating && (
-        <form className="folder-tree-create" onSubmit={handleCreate}>
+        <form className="folder-tree-create folder-action-box" onSubmit={handleCreate} aria-busy={busy}>
+          <h4>Tạo thư mục</h4>
+          <p className="folder-action-location">Vị trí: <strong>{createParent === null ? "Thư mục gốc" : folders.find((folder) => folder.id === createParent)?.name}</strong></p>
+          <label htmlFor="new-folder-name">Tên thư mục</label>
           <input
+            id="new-folder-name"
+            required
+            disabled={busy}
             autoFocus
             value={newName}
             placeholder="Nhập tên thư mục"
@@ -348,16 +377,26 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
             }}
           />
           <div className="folder-create-actions">
-            <button type="submit" className="secondary-button btn-sm">
-              Tạo
+            <button type="submit" className="primary-button btn-sm" disabled={busy || !newName.trim()}>
+              {busy ? "Đang tạo..." : "Tạo thư mục"}
             </button>
-            <button type="button" className="text-button" onClick={closeCreate}>
+            <button type="button" className="secondary-button" disabled={busy} onClick={closeCreate}>
               Huỷ
             </button>
           </div>
         </form>
       )}
-      {selectedId && canWrite && !creating && (
+      {deleteId !== null && (
+        <section className="folder-action-box folder-delete-box" aria-label="Xác nhận xóa thư mục" aria-busy={busy}>
+          <h4><Trash2 size={17} aria-hidden="true" /> Xóa thư mục?</h4>
+          <p>Bạn sắp xóa thư mục <strong>{folders.find((folder) => folder.id === deleteId)?.name}</strong> và toàn bộ thư mục con.</p>
+          <div className="folder-create-actions">
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => { setDeleteId(null); setError(""); }}>Hủy</Button>
+            <Button type="button" variant="danger" disabled={busy} onClick={() => void handleDelete()}>{busy ? "Đang xóa..." : "Xóa thư mục"}</Button>
+          </div>
+        </section>
+      )}
+      {selectedId && canWrite && !creating && deleteId === null && (
         <div className="folder-parent-hint">
           Thư mục mới sẽ tạo bên trong: <strong>{folders.find((f) => f.id === selectedId)?.name}</strong>
         </div>
@@ -367,13 +406,13 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
         <div className="folder-files-panel">
           <div className="folder-files-header">
             <span className="folder-files-title">
-              📁 {pinnedFolder.name}
+              <FolderIcon size={16} /> {pinnedFolder.name}
               {pinnedDocs && (
                 <span className="folder-files-count">{pinnedDocs.length} file</span>
               )}
             </span>
             <button type="button" className="icon-button" onClick={closeFiles} title="Đóng">
-              ✕
+              <X size={16} />
             </button>
           </div>
           {pinnedLoading ? (
@@ -386,7 +425,7 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
             <ul className="popover-list">
               {pinnedDocs.map((doc) => (
                 <li key={doc.id}>
-                  <span className="popover-file-icon">{fileTypeInfo(doc.file_name, doc.file_type).icon}</span>
+                  <span className="popover-file-icon"><FileText size={16} /></span>
                   <Link to={`/documents/${doc.id}`} className="popover-file-name" title={doc.file_name}>
                     {doc.title}
                   </Link>
@@ -398,7 +437,8 @@ export default function FolderTree({ folders, selectedId, onSelect, onChanged }:
         </div>
       )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
     </div>
   );
 }
+

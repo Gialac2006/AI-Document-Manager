@@ -1,0 +1,12 @@
+.folder-tree .folder-action-box { display: block; padding: 14px; margin-top: 16px; border: 1px solid #dbe1e8; border-radius: 10px; background: #f8fafc; }
+.folder-action-box h4 { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 12px; }
+.folder-action-box p { font-size: 13px; line-height: 1.6; margin: 0 0 12px; overflow-wrap: anywhere; }
+.folder-action-location { color: #64748b; }
+.folder-action-box label { display: block; margin-bottom: 8px; font-size: 13px; }
+.folder-tree .folder-action-box input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+.folder-action-box input:focus { outline: 2px solid #bfdbfe; border-color: #2563eb; }
+.folder-tree .folder-create-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.folder-tree .folder-create-actions > button { width: auto; padding: 8px 10px; font-size: 13px; }
+.folder-tree .folder-delete-box { border-color: #fecaca; background: #fff; }
+.folder-delete-box h4 { color: #b91c1c; }
+.folder-action-box button:disabled { opacity: .55; cursor: not-allowed; }

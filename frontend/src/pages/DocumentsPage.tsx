@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   FileText,
@@ -16,6 +16,8 @@ import UploadDocument from "../components/UploadDocument.tsx";
 import Button from "../components/ui/Button.tsx";
 import Spinner from "../components/ui/Spinner.tsx";
 import type { Document, Folder } from "../types";
+
+import "../documents.css";
 
 const PAGE_SIZE = 20;
 
@@ -86,45 +88,59 @@ export default function DocumentsPage() {
     };
   }, []);
 
+  const requestId = useRef(0);
+  const inFlight = useRef(false);
+
   const loadData = useCallback(
-    async (folderId: number | null, targetPage = 1, append = false) => {
+    async (folderId: number | null, targetPage = 1, background = false) => {
+      if (background && inFlight.current) return;
+      const id = ++requestId.current;
+      inFlight.current = true;
       try {
-        const [folderList, docResult] = await Promise.all([
+        const [folderList, results] = await Promise.all([
           folderApi.list(),
-          documentApi.list(folderId, targetPage, PAGE_SIZE),
+          Promise.all(Array.from({ length: targetPage }, (_, index) =>
+            documentApi.list(folderId, index + 1, PAGE_SIZE))),
         ]);
+        if (id !== requestId.current) return;
         setFolders(folderList);
-        setDocuments((prev) => (append ? [...prev, ...docResult.items] : docResult.items));
-        setTotal(docResult.total);
+        setDocuments([...new Map(results.flatMap(result => result.items).map(doc => [doc.id, doc])).values()]);
+        setTotal(results[0].total);
         setPage(targetPage);
         setError("");
       } catch (err) {
-        setError((err as Error).message);
+        if (id === requestId.current) setError((err as Error).message);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (id === requestId.current) {
+          inFlight.current = false;
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [],
   );
 
   const loadMore = useCallback(() => {
-    if (page * PAGE_SIZE < total && !loadingMore) {
+    if (page * PAGE_SIZE < total && !loadingMore && !inFlight.current) {
       setLoadingMore(true);
-      loadData(selectedFolder, page + 1, true);
+      loadData(selectedFolder, page + 1);
     }
   }, [page, total, selectedFolder, loadingMore, loadData]);
 
   // Tự làm mới danh sách khi quay lại tab/đổi folder và mỗi 10 giây
   useEffect(() => {
-    loadData(selectedFolder);
+    setLoading(true);
+    setPage(1);
+    void loadData(selectedFolder);
+    return () => { requestId.current += 1; inFlight.current = false; };
   }, [selectedFolder, loadData]);
 
   useEffect(() => {
-    const onFocus = () => loadData(selectedFolder, page);
+    const onFocus = () => loadData(selectedFolder, page, true);
     window.addEventListener("focus", onFocus);
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") loadData(selectedFolder, page);
+      if (document.visibilityState === "visible") loadData(selectedFolder, page, true);
     }, 10000);
     return () => {
       window.removeEventListener("focus", onFocus);
@@ -137,7 +153,7 @@ export default function DocumentsPage() {
     if (!window.confirm("Xoá tài liệu này?")) return;
     try {
       await documentApi.delete(id);
-      setDocuments((docs) => docs.filter((d) => d.id !== id));
+      await loadData(selectedFolder, page);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -184,15 +200,7 @@ export default function DocumentsPage() {
   if (loading) return <Spinner />;
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1>Quản lý tài liệu</h1>
-          <p className="page-header-desc">
-            Tạo thư mục, tải tài liệu lên và quản lý theo từng thư mục.
-          </p>
-        </div>
-      </div>
+    <div className="documents-page">
 
       {error && <div className="alert alert-error">{error}</div>}
             {changesError && (
@@ -212,51 +220,29 @@ export default function DocumentsPage() {
         </aside>
 
         <section className="documents-main">
-          <div className="documents-toolbar">
-            <span className="badge">{folderName}</span>
-            <span className="muted">{search || categoryFilter ? filteredDocuments.length : total} tài liệu</span>
-            <div className="toolbar-spacer"></div>
-            {categoryOptions.length > 0 && (
-              <select
-                className="toolbar-select"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="">🏷️ Tất cả loại</option>
-                {categoryOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            )}
-            <div className="toolbar-search">
-            <Search size={16} strokeWidth={1.8} />
-
-            <input
-                placeholder="Tìm theo tên tài liệu..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setShowUpload((s) => !s)}
-            >
-              {showUpload ? (
-                <>
-                  <X size={16} strokeWidth={1.8} />
-                  <span>Đóng</span>
-                </>
-              ) : (
-                <>
-                  <Upload size={16} strokeWidth={1.8} />
-                  <span>Tải lên</span>
-                </>
-              )}
-            </button>
+          <div className="documents-heading">
+            <div><h2>{folderName}</h2><p className="muted">{total} tài liệu</p></div>
+            <Button type="button" onClick={() => setShowUpload(value => !value)}>
+              {showUpload ? <X size={17} /> : <Upload size={17} />}
+              {showUpload ? "Đóng tải lên" : "Tải tài liệu lên"}
+            </Button>
           </div>
+          <div className="documents-toolbar">
+            <label className="toolbar-search">
+              <Search size={18} aria-hidden="true" />
+              <input aria-label="Tìm theo tên tài liệu" placeholder="Tìm theo tên tài liệu..."
+                value={search} onChange={event => setSearch(event.target.value)} />
+            </label>
+            <select className="toolbar-select" aria-label="Lọc phân loại" value={categoryFilter}
+              onChange={event => setCategoryFilter(event.target.value)}>
+              <option value="">Tất cả phân loại</option>
+              {categoryOptions.map(category => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </div>
+          {(search || categoryFilter) && <p className="muted documents-filter-note">
+            {filteredDocuments.length} kết quả trong {documents.length} tài liệu đã tải.
+            <button type="button" className="text-button" onClick={() => { setSearch(""); setCategoryFilter(""); }}>Xóa bộ lọc</button>
+          </p>}
 
           {showUpload && (
             <UploadDocument
@@ -276,8 +262,8 @@ export default function DocumentsPage() {
                 size={24}
                 strokeWidth={1.6}
               />
-              {search ? (
-                <>Không tìm thấy tài liệu phù hợp với "{search}".</>
+              {search || categoryFilter ? (
+                <>Không có kết quả phù hợp trong các tài liệu đã tải.</>
               ) : (
                 <>Chưa có tài liệu nào trong thư mục này.</>
               )}
@@ -294,15 +280,14 @@ export default function DocumentsPage() {
                   />
                 ))}
               </div>
-              {documents.length < total && (
-                <div className="load-more-wrap">
-                  <Button variant="secondary" disabled={loadingMore} onClick={loadMore}>
-                    {loadingMore ? "Đang tải..." : "Xem thêm tài liệu"}
-                  </Button>
-                </div>
-              )}
             </>
           )}
+          <div className="documents-footer">
+            <span className="muted">Đã tải {documents.length} / {total} tài liệu</span>
+            {documents.length < total && <Button variant="secondary" disabled={loadingMore} onClick={loadMore}>
+              {loadingMore ? "Đang tải..." : "Xem thêm tài liệu"}
+            </Button>}
+          </div>
         </section>
       </div>
     </div>

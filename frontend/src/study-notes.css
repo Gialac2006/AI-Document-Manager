@@ -1,0 +1,28 @@
+.study-notes-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.study-notes-heading p { margin: 0; }
+.study-notes-heading a, .study-note-card > .primary-link { display: inline-flex; align-items: center; gap: 6px; }
+.study-notes-page .row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.study-notes-page .row-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; }
+.study-notes-page button[aria-pressed="true"] { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+.study-notes-page button:disabled { opacity: .5; cursor: not-allowed; }
+.study-notes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; margin-top: 20px; }
+.study-notes-page .study-note-card { padding: 20px; margin: 0; min-width: 0; border-radius: 10px; box-shadow: none; }
+.study-note-card-expanded { grid-column: 1 / -1; }
+.study-note-card .panel-title { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.study-note-card > .muted { font-size: 12px; line-height: 1.6; margin: 8px 0; }
+.study-note-content { line-height: 1.7; padding: 14px 0; margin: 12px 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.study-note-card textarea { min-height: 180px; resize: vertical; }
+.study-notes-empty { text-align: center; padding: 36px 24px; margin-top: 20px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 10px; }
+.study-notes-empty svg { display: block; margin: 0 auto 12px; color: #64748b; }
+.study-notes-empty p { margin: 0; line-height: 1.6; }
+@media (max-width: 1000px) { .study-notes-grid { grid-template-columns: 1fr; } }
+
+/* Ưu tiên nội dung ghi chú, thu gọn trạng thái và thao tác. */
+.study-notes-page > .muted { margin: 12px 0 0; font-size: 13px; }
+.study-note-card .panel-title { margin: 0 0 12px; }
+.study-note-status { display: inline-block; margin: 0 0 4px; padding: 3px 8px; color: #166534; background: #f0fdf4; border-radius: 5px; font-size: 12px; }
+.study-note-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.study-note-footer > .primary-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+.study-note-footer > .muted { flex-basis: 100%; margin: 0; font-size: 13px; }
+.study-notes-page .study-note-actions { margin: 0; }
+.study-notes-page .study-note-actions button { padding: 7px 10px; font-size: 13px; }

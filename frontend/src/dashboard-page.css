@@ -1,0 +1,36 @@
+.dashboard-grid.overview-page { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.overview-page .dashboard-main { gap: 20px; }
+.overview-page .hero-card { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; }
+.overview-page .hero-title { font-size: 22px; }
+.overview-page .hero-summary { line-height: 1.7; max-width: 700px; color: var(--color-muted); }
+.overview-page .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.overview-page .hero-actions > a { width: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+.overview-page .stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 0; gap: 16px; }
+.overview-page .stat-card { padding: 20px; gap: 12px; min-width: 0; box-shadow: none; }
+.overview-page .stat-icon { flex-shrink: 0; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; }
+.overview-page .stat-card-body { min-width: 0; }
+.overview-page .stat-head { flex-wrap: wrap; }
+.overview-page .stat-value { font-size: 28px; }
+.overview-page .stat-label { font-size: 13px; }
+.overview-page .dashboard-main > .panel { padding: 24px; margin: 0; box-shadow: none; }
+.overview-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.overview-section-heading h2 { font-size: 17px; margin: 0; }
+.overview-section-heading > a { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #2563eb; }
+.overview-table-scroll { overflow-x: auto; }
+.overview-page .data-table { min-width: 620px; }
+.overview-page .doc-cell { min-width: 180px; max-width: 450px; }
+.overview-page .doc-title { overflow-wrap: anywhere; }
+.overview-page .doc-type-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: #f1f5f9; color: #64748b; }
+.overview-page .dashboard-side { position: static; }
+.overview-page .insight-card { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; box-shadow: none; padding: 24px; }
+.overview-page .insight-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.overview-page .insight-icon { color: #64748b; display: inline-flex; }
+.overview-page .insight-item-value { overflow-wrap: anywhere; }
+.overview-page .empty-icon { display: block; margin-bottom: 12px; }
+.overview-page .empty-icon svg { display: block; margin: auto; }
+.overview-scope { margin: 0; font-size: 13px; }
+@media (max-width: 1100px) { .overview-page .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .overview-page .stat-grid, .overview-page .insight-body { grid-template-columns: minmax(0, 1fr); }
+  .overview-page .hero-card, .overview-page .dashboard-main > .panel, .overview-page .insight-card { padding: 16px; }
+}

@@ -5,6 +5,8 @@ import { notificationApi } from "../api/notificationApi";
 import type { NotificationComparison } from "../api/notificationApi";
 import { compareLines } from "./StudyNoteReviewPanel";
 import Button from "./ui/Button";
+import { Check, X, GitCompareArrows } from "lucide-react";
+import "../review-panel.css";
 
 interface Props {
   notificationId: number;
@@ -104,11 +106,11 @@ export default function NotificationReviewPanel({
 
   return (
     <section
-      className="panel"
+      className="panel document-review"
       aria-label="Đối chiếu phiên bản tài liệu"
       style={{ marginTop: 20, padding: 20 }}
     >
-      <h2>Đối chiếu phiên bản tài liệu</h2>
+      <h2 className="review-heading"><GitCompareArrows size={20} aria-hidden="true" /> Đối chiếu phiên bản tài liệu</h2>
 
       {loading && <p role="status">Đang tải nội dung...</p>}
 
@@ -120,7 +122,7 @@ export default function NotificationReviewPanel({
 
       {comparison && diff && (
         <>
-          <h3>{comparison.document_title}</h3>
+          <h3 className="review-document-title">{comparison.document_title}</h3>
 
           <p>
             Phiên bản {comparison.before_version} →{" "}
@@ -139,7 +141,7 @@ export default function NotificationReviewPanel({
             Mở tài liệu
           </Link>
 
-          <p>
+          <p className="review-legend">
             <span style={{ color: "#991b1b" }}>
               − Đỏ: dòng bị xóa hoặc thay thế.
             </span>{" "}
@@ -155,7 +157,7 @@ export default function NotificationReviewPanel({
             </p>
           )}
 
-          <div
+          <div className="review-columns"
             style={{
               display: "grid",
               gridTemplateColumns:
@@ -183,6 +185,7 @@ export default function NotificationReviewPanel({
                 <h4>{column.label}</h4>
 
                 <div
+                  className="review-text"
                   tabIndex={0}
                   aria-label={column.label}
                   style={{
@@ -233,7 +236,7 @@ export default function NotificationReviewPanel({
             </p>
           ) : (
             <>
-              <label
+              <label className="review-confirm"
                 style={{
                   display: "flex",
                   gap: 8,
@@ -255,26 +258,26 @@ export default function NotificationReviewPanel({
                 </span>
               </label>
 
-              <Button
-                type="button"
-                disabled={!checked || saving}
-                onClick={confirmReview}
-              >
-                {saving ? "Đang xác nhận..." : "Xác nhận đã đối chiếu"}
-              </Button>
+
             </>
           )}
         </>
       )}
 
-      <div style={{ marginTop: 16 }}>
+      <div className="review-actions">
+        {comparison && !comparison.reviewed_at && (
+          <Button type="button" disabled={!checked || saving} onClick={confirmReview}>
+            <Check size={17} aria-hidden="true" />
+            {saving ? "Đang xác nhận..." : "Xác nhận đã đối chiếu"}
+          </Button>
+        )}
         <Button
           type="button"
           variant="secondary"
           disabled={saving}
           onClick={onClose}
         >
-          Đóng đối chiếu
+          <X size={17} aria-hidden="true" /> Đóng đối chiếu
         </Button>
       </div>
     </section>

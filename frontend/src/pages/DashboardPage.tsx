@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { FileText, FolderOpen, Clock3, CircleCheck, Info, MessageSquare, ArrowRight } from "lucide-react";
+import "../dashboard-page.css";
 import { Link } from "react-router-dom";
 
 import { documentApi } from "../api/documentApi";
@@ -15,20 +17,24 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const [docResult, folderList] = await Promise.all([
         documentApi.list(null, 1, 100),
         folderApi.list(),
       ]);
       setDocuments(docResult.items);
+      setTotalCount(docResult.total);
       setFolders(folderList);
       setError("");
     } catch (err) {
-      setError((err as Error).message);
-    }
+      setError(err instanceof Error ? err.message : "Không thể tải tổng quan.");
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -40,101 +46,97 @@ export default function DashboardPage() {
     .slice(0, 8);
   const latest = recent[0];
 
-  const total = documents.length;
+  const total = totalCount;
   const folderCount = folders.length;
   const indexed = documents.filter((doc) =>
     ["text_extracted", "completed", "indexed"].includes(
       (doc.processing_status || "").toLowerCase()
     )
   ).length;
-  const pending = documents.length - indexed;
+  const pending = documents.filter((doc) => ["processing", "pending"].includes((doc.processing_status || "").toLowerCase())).length;
   const weekAgo = Date.now() - WEEK_MS;
   const weeklyNew = documents.filter(
     (doc) => new Date(doc.created_at).getTime() >= weekAgo
   ).length;
 
   return (
-    <div className="dashboard-grid">
+    <div className="dashboard-grid overview-page">
       <div className="dashboard-main">
         <section className="hero-card">
           <div>
             <h1 className="hero-title">Chào mừng trở lại, {user?.full_name}</h1>
             <p className="hero-summary">
-              Bạn đang đăng nhập với vai trò{" "}
-              <strong>{user ? ROLE_LABELS[user.role] || user.role : ""}</strong>. Hệ
-              thống hiện có {total} tài liệu
-              {pending > 0 ? `, ${pending} tài liệu đang chờ xử lý AI.` : "."}
+              Quản lý tài liệu, ghi chú và theo dõi nội dung đã lưu của bạn.
+              {user && <> Vai trò: <strong>{ROLE_LABELS[user.role] || user.role}</strong>.</>}
             </p>
           </div>
           <div className="hero-actions">
             <Link to="/documents" className="primary-button">
-              Tải tài liệu lên
+              <FolderOpen size={17} aria-hidden="true" /> Mở tài liệu
             </Link>
             <Link to="/chat" className="outline-button">
-              Bắt đầu chat
+              <MessageSquare size={17} aria-hidden="true" /> Bắt đầu chat
             </Link>
           </div>
         </section>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="alert alert-error" role="alert">{error} <button type="button" className="secondary-button" onClick={() => void load()} disabled={loading}>Thử lại</button></div>}
+        {loading && <p role="status" className="muted">Đang tải tổng quan...</p>}
+        {!loading && !error && total > documents.length && <p className="muted overview-scope">Thống kê xử lý và số tài liệu thêm trong 7 ngày dựa trên {documents.length} tài liệu đã tải.</p>}
 
         <div className="stat-grid">
           <div className="stat-card">
-            <div className="stat-icon blue">📄</div>
+            <div className="stat-icon blue"><FileText size={22} aria-hidden="true" /></div>
             <div className="stat-card-body">
               <div className="stat-head">
-                <span className="stat-value">{total}</span>
-                <span className="stat-trend up">+{weeklyNew} / 7 ngày</span>
+                <span className="stat-value">{loading || error ? "—" : total}</span>
+                {!loading && !error && <span className="stat-trend up">+{weeklyNew} / 7 ngày</span>}
               </div>
               <div className="stat-label">Tổng tài liệu</div>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon green">📂</div>
+            <div className="stat-icon green"><FolderOpen size={22} aria-hidden="true" /></div>
             <div className="stat-card-body">
               <div className="stat-head">
-                <span className="stat-value">{folderCount}</span>
+                <span className="stat-value">{loading || error ? "—" : folderCount}</span>
               </div>
               <div className="stat-label">Thư mục</div>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon amber">⏳</div>
+            <div className="stat-icon amber"><Clock3 size={22} aria-hidden="true" /></div>
             <div className="stat-card-body">
               <div className="stat-head">
-                <span className="stat-value">{pending}</span>
-                {pending > 0 ? (
-                  <span className="status-badge processing">Đang xử lý</span>
-                ) : (
-                  <span className="status-badge indexed">Hoàn tất</span>
-                )}
+                <span className="stat-value">{loading || error ? "—" : pending}</span>
+
               </div>
-              <div className="stat-label">Công việc đang chờ</div>
+              <div className="stat-label">Đang chờ / xử lý</div>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon violet">✅</div>
+            <div className="stat-icon violet"><CircleCheck size={22} aria-hidden="true" /></div>
             <div className="stat-card-body">
               <div className="stat-head">
-                <span className="stat-value">{indexed}</span>
+                <span className="stat-value">{loading || error ? "—" : indexed}</span>
               </div>
-              <div className="stat-label">Đã xử lý AI</div>
+              <div className="stat-label">Đã trích xuất</div>
             </div>
           </div>
         </div>
 
         <div className="panel">
-          <div className="panel-title">Tài liệu gần đây</div>
-          {recent.length === 0 ? (
+          <div className="overview-section-heading"><h2>Tài liệu mới thêm</h2><Link to="/documents">Xem tất cả <ArrowRight size={16} aria-hidden="true" /></Link></div>
+          {loading ? <p className="muted">Đang tải tài liệu...</p> : error ? <p className="muted">Chưa tải được danh sách tài liệu.</p> : recent.length === 0 ? (
             <div className="empty-state">
-              <span className="empty-icon">🗂️</span>
+              <span className="empty-icon"><FolderOpen size={22} aria-hidden="true" /></span>
               Chưa có tài liệu nào.{" "}
               <Link to="/documents" className="primary-link">
                 Tải tài liệu lên
               </Link>
             </div>
           ) : (
-            <table className="data-table">
+            <div className="overview-table-scroll"><table className="data-table">
               <thead>
                 <tr>
                   <th>Tài liệu</th>
@@ -153,7 +155,7 @@ export default function DashboardPage() {
                       <td>
                         <div className="doc-cell">
                           <span className={`doc-type-icon ${file.cls}`}>
-                            {file.icon}
+                            <FileText size={20} aria-hidden="true" />
                           </span>
                           <Link to={`/documents/${doc.id}`} className="doc-title">
                             {doc.title}
@@ -161,7 +163,7 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td className="muted">{folder?.name ?? "—"}</td>
-                      <td className="muted">{formatDate(doc.updated_at)}</td>
+                      <td className="muted">{formatDate(doc.created_at)}</td>
                       <td>
                         <span className={`status-badge ${status.cls}`}>
                           {status.label}
@@ -171,7 +173,7 @@ export default function DashboardPage() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       </div>
@@ -179,14 +181,14 @@ export default function DashboardPage() {
       <aside className="dashboard-side">
         <div className="insight-card">
           <div className="insight-card-header">
-            <span className="insight-icon">✨</span>
+            <span className="insight-icon"><Info size={22} aria-hidden="true" /></span>
             <div>
               <div className="insight-title">Thông tin nhanh</div>
-              <div className="insight-subtitle">Tổng quan hệ thống của bạn</div>
+              <div className="insight-subtitle">Tài liệu và thao tác thường dùng</div>
             </div>
           </div>
           <div className="insight-body">
-            {latest ? (
+            {loading ? <p className="muted">Đang tải...</p> : error ? <p className="muted">Chưa tải được thông tin.</p> : latest ? (
               <div>
                 <div className="insight-item-label">Tài liệu mới nhất</div>
                 <Link

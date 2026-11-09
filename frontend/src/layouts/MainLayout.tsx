@@ -92,6 +92,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/audit-logs": "Nhật ký hoạt động",
   "/study-notes": "Ghi chú học tập",
   "/notifications": "Thông báo",
+  "/profile": "Hồ sơ cá nhân",
 };
 
 // Lấy chữ cái đầu của họ tên để hiển thị avatar

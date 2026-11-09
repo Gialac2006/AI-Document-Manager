@@ -1,5 +1,8 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
+
+import { FileText, Upload, X } from "lucide-react";
+import "../upload-document.css";
 
 import { documentApi } from "../api/documentApi";
 import type { Folder } from "../types";
@@ -19,6 +22,8 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const fieldId = useId();
+  const submitting = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Thư mục hiệu lực: ưu tiên lựa chọn trong form ("" = Gốc), nếu chưa chọn thì
@@ -28,10 +33,12 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
   // Gửi file và thông tin lên server
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting.current) return;
     if (!file) {
       setError("Vui lòng chọn file để tải lên");
       return;
     }
+    submitting.current = true;
     setUploading(true);
     setError("");
     try {
@@ -46,8 +53,9 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
       if (inputRef.current) inputRef.current.value = "";
       if (onUploaded) onUploaded();
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof Error ? err.message : "Không thể tải tài liệu. Vui lòng thử lại.");
     } finally {
+      submitting.current = false;
       setUploading(false);
     }
   };
@@ -56,64 +64,76 @@ export default function UploadDocument({ folderId, folders, onUploaded }: Upload
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(false);
-    if (e.dataTransfer.files?.length) setFile(e.dataTransfer.files[0] ?? null);
+    if (submitting.current) return;
+    if (e.dataTransfer.files?.length) {
+      setFile(e.dataTransfer.files[0] ?? null);
+      setError("");
+    }
   };
 
   return (
-    <form className="upload-form" onSubmit={handleSubmit}>
-      <h3>⬆️ Tải tài liệu lên</h3>
+    <form className="upload-form upload-document" onSubmit={handleSubmit} aria-busy={uploading}>
+      <h3>Tải tài liệu lên</h3>
       <div
-        className={`upload-dropzone ${dragging ? "dragging" : ""}`}
-        onClick={() => inputRef.current?.click()}
+        className={`upload-document-dropzone ${dragging ? "is-dragging" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
-          setDragging(true);
+          if (!uploading) setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+        }}
         onDrop={handleDrop}
       >
-        <span className="dz-icon">📤</span>
-        {file ? (
-          <>
-            <strong>{file.name}</strong>
-          </>
-        ) : (
-          <>
-            Kéo thả file vào đây hoặc <strong>chọn file</strong>
-          </>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          hidden
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
+        {file ? <FileText size={28} aria-hidden="true" /> : <Upload size={28} aria-hidden="true" />}
+        <strong>{file ? file.name : "Kéo thả tài liệu vào đây"}</strong>
+        <span className="upload-document-hint">
+          {file
+            ? `${file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}`
+            : "Chọn một tệp từ máy tính · Tối đa 100 MB"}
+        </span>
+        <div className="upload-document-file-actions">
+          <Button type="button" variant="secondary" disabled={uploading} onClick={() => inputRef.current?.click()}>
+            {file ? "Chọn tệp khác" : "Chọn tệp"}
+          </Button>
+          {file && (
+            <Button type="button" variant="text" disabled={uploading} onClick={() => {
+              setFile(null);
+              setError("");
+              if (inputRef.current) inputRef.current.value = "";
+            }}>
+              <X size={16} aria-hidden="true" /> Bỏ chọn
+            </Button>
+          )}
+        </div>
+        <input ref={inputRef} type="file" hidden disabled={uploading} onChange={(e) => {
+          const selected = e.target.files?.[0];
+          if (selected) { setFile(selected); setError(""); }
+        }} />
       </div>
-      <div className="upload-hint">Kích thước tối đa 100 MB</div>
-      <div className="form-group">
-        <label>Tiêu đề (tuỳ chọn)</label>
-        <input
-          type="text"
-          value={title}
-          placeholder="Mặc định theo tên file"
-          onChange={(e) => setTitle(e.target.value)}
-        />
+      <div className="upload-document-fields">
+        <div className="form-group">
+          <label htmlFor={`${fieldId}-title`}>Tiêu đề (tuỳ chọn)</label>
+          <input id={`${fieldId}-title`} type="text" value={title} disabled={uploading}
+            placeholder="Mặc định theo tên tệp" onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label htmlFor={`${fieldId}-folder`}>Thư mục lưu</label>
+          <select id={`${fieldId}-folder`} value={effectiveFolder} disabled={uploading}
+            onChange={(e) => setTargetFolder(e.target.value)}>
+            <option value="">Thư mục gốc</option>
+            {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Thư mục (tuỳ chọn)</label>
-        <select value={effectiveFolder} onChange={(e) => setTargetFolder(e.target.value)}>
-          <option value="">— Gốc —</option>
-          {folders.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-            </option>
-          ))}
-        </select>
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
+      <div className="upload-document-footer">
+        {uploading && <span role="status">Đang tải tài liệu, vui lòng chờ...</span>}
+        <Button type="submit" variant="primary" disabled={uploading || !file}>
+          <Upload size={17} aria-hidden="true" />
+          {uploading ? "Đang tải lên..." : "Tải tài liệu lên"}
+        </Button>
       </div>
-      {error && <div className="alert alert-error">{error}</div>}
-      <Button type="submit" variant="primary" disabled={uploading}>
-        {uploading ? "Đang tải lên..." : "Tải lên"}
-      </Button>
     </form>
   );
 }
