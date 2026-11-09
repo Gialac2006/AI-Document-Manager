@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { NotebookPen, RefreshCw, ArrowUpRight } from "lucide-react";
+import "../study-notes.css";
 
 import { studyNoteApi } from "../api/studyNoteApi";
 import type {
@@ -93,16 +95,17 @@ export default function StudyNotesPage() {
   }
 
   return (
-    <section>
-      <h1>Ghi chú học tập</h1>
+    <section className="study-notes-page">
+      <div className="study-notes-heading">
 
       <p className="muted">
         Kiến thức bạn đã lưu từ các tài liệu để ôn lại.
       </p>
 
       <Link to="/documents" className="primary-link">
-        Mở tài liệu để tạo ghi chú →
+        <ArrowUpRight size={17} aria-hidden="true" /> Tạo ghi chú từ tài liệu
       </Link>
+      </div>
 
       <div
         role="group"
@@ -122,7 +125,7 @@ export default function StudyNotesPage() {
           aria-pressed={filter === "all"}
           onClick={() => changeFilter("all")}
         >
-          {filter === "all" ? "✓ Tất cả" : "Tất cả"}
+          Tất cả
         </Button>
 
         <Button
@@ -132,9 +135,7 @@ export default function StudyNotesPage() {
           aria-pressed={filter === "needs_review"}
           onClick={() => changeFilter("needs_review")}
         >
-          {filter === "needs_review"
-            ? "✓ Cần xem lại"
-            : "Cần xem lại"}
+          Cần xem lại
         </Button>
 
         <Button
@@ -143,7 +144,7 @@ export default function StudyNotesPage() {
           disabled={loading}
           onClick={reloadNotes}
         >
-          Tải lại
+          <RefreshCw size={16} aria-hidden="true" /> Tải lại
         </Button>
       </div>
 
@@ -162,13 +163,17 @@ export default function StudyNotesPage() {
       ) : (
         <>
           {notes.length === 0 && (
-            <div className="panel" style={{ marginTop: 20 }}>
+            <div className="study-notes-empty" role="status">
+              <NotebookPen size={24} strokeWidth={1.6} aria-hidden="true" />
+              <p>
               {filter === "needs_review"
                 ? "Hiện không có ghi chú nào cần xem lại."
                 : "Bạn chưa có ghi chú. Mở một tài liệu để viết ghi chú đầu tiên."}
+              </p>
             </div>
           )}
 
+          <div className="study-notes-grid">
           {notes.map((note) => (
             <StudyNoteCard
               key={note.id}
@@ -177,9 +182,11 @@ export default function StudyNotesPage() {
               onDeleted={reloadNotes}
             />
           ))}
+          </div>
         </>
       )}
 
+      {!loading && !error && (page > 1 || notes.length >= 20) && (
       <div
         className="row-actions"
         style={{
@@ -209,6 +216,7 @@ export default function StudyNotesPage() {
           Trang sau
         </Button>
       </div>
+      )}
     </section>
   );
 }

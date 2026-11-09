@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
+import { Save, LogOut, UserRound, LockKeyhole } from "lucide-react";
+import "../profile-page.css";
 
 import { authApi } from "../api/authApi";
 import Button from "../components/ui/Button.tsx";
@@ -30,6 +33,7 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const saving = useRef(false);
 
   // Đăng xuất và chuyển về trang đăng nhập
   const handleLogout = () => {
@@ -40,6 +44,7 @@ export default function ProfilePage() {
   // Gửi form cập nhật thông tin cá nhân sau khi kiểm tra dữ liệu hợp lệ
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saving.current) return;
     setError("");
     setSuccess("");
 
@@ -47,11 +52,12 @@ export default function ProfilePage() {
       setError("Vui lòng nhập họ và tên");
       return;
     }
-    if (password && password !== confirm) {
+    if (password !== confirm) {
       setError("Mật khẩu xác nhận không khớp");
       return;
     }
 
+    saving.current = true;
     setSubmitting(true);
     try {
       const updated = await authApi.updateMe({
@@ -60,12 +66,15 @@ export default function ProfilePage() {
         password: password || undefined,
       });
       updateUser(updated);
+      setFullName(updated.full_name);
+      setEmail(updated.email);
       setPassword("");
       setConfirm("");
       setSuccess("Đã lưu thông tin thành công.");
     } catch (err) {
-      setError((err as Error).message || "Không thể cập nhật thông tin");
+      setError(err instanceof Error ? err.message : "Không thể cập nhật thông tin");
     } finally {
+      saving.current = false;
       setSubmitting(false);
     }
   };
@@ -73,18 +82,10 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="profile-wrap">
-      <div className="page-header">
-        <div>
-          <h1>Hồ sơ</h1>
-          <p className="page-header-desc">
-            Xem và chỉnh sửa thông tin tài khoản của bạn
-          </p>
-        </div>
-      </div>
+    <div className="profile-wrap account-profile">
+      <p className="account-profile-description">Xem và cập nhật thông tin tài khoản của bạn.</p>
 
       <div className="profile-card">
-        <div className="profile-banner" />
         <div className="profile-head">
           <div className="profile-avatar">{initials(user.full_name)}</div>
           <div className="profile-head-text">
@@ -97,13 +98,18 @@ export default function ProfilePage() {
         </div>
 
         <form className="profile-form" onSubmit={handleSubmit}>
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
+          {error && <div className="error-message" role="alert">{error}</div>}
+          {success && <div className="alert alert-success" role="status">{success}</div>}
 
+          <section className="account-profile-section" aria-labelledby="account-info-title">
+          <h2 id="account-info-title"><UserRound size={18} aria-hidden="true" /> Thông tin cá nhân</h2>
+          <div className="account-profile-fields">
           <div className="form-group">
             <label htmlFor="profile_name">Họ và tên</label>
             <input
               id="profile_name"
+              autoComplete="name"
+              disabled={submitting}
               type="text"
               required
               value={fullName}
@@ -115,6 +121,8 @@ export default function ProfilePage() {
             <label htmlFor="profile_email">Email</label>
             <input
               id="profile_email"
+              autoComplete="email"
+              disabled={submitting}
               type="email"
               required
               value={email}
@@ -122,10 +130,18 @@ export default function ProfilePage() {
             />
           </div>
 
+          </div>
+          </section>
+          <section className="account-profile-section" aria-labelledby="account-password-title">
+          <h2 id="account-password-title"><LockKeyhole size={18} aria-hidden="true" /> Đổi mật khẩu</h2>
+          <p className="account-profile-help">Để trống nếu không đổi mật khẩu. Mật khẩu mới cần ít nhất 8 ký tự.</p>
+          <div className="account-profile-fields">
           <div className="form-group">
-            <label htmlFor="profile_password">Mật khẩu mới (bỏ trống nếu không đổi)</label>
+            <label htmlFor="profile_password">Mật khẩu mới</label>
             <PasswordInput
               id="profile_password"
+              autoComplete="new-password"
+              disabled={submitting}
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -137,6 +153,8 @@ export default function ProfilePage() {
             <label htmlFor="profile_confirm">Xác nhận mật khẩu mới</label>
             <PasswordInput
               id="profile_confirm"
+              autoComplete="new-password"
+              disabled={submitting}
               minLength={8}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -144,6 +162,8 @@ export default function ProfilePage() {
             />
           </div>
 
+          </div>
+          </section>
           <div className="profile-meta">
             <div className="profile-meta-item">
               <span className="profile-meta-label">Vai trò</span>
@@ -171,10 +191,10 @@ export default function ProfilePage() {
 
           <div className="profile-actions">
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Đang lưu..." : "Lưu thay đổi"}
+              <Save size={17} aria-hidden="true" /> {submitting ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
-            <Button type="button" variant="danger" onClick={handleLogout}>
-              Đăng xuất
+            <Button type="button" variant="secondary" onClick={handleLogout} disabled={submitting}>
+              <LogOut size={17} aria-hidden="true" /> Đăng xuất
             </Button>
             <Link to="/dashboard" className="text-button">
               Về trang chủ

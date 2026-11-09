@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { FileText } from "lucide-react";
+import { FileText, ArrowLeft, Download, Upload, Trash2, CircleCheck, CircleX } from "lucide-react";
+import "../document-detail.css";
 import StudyNoteForm from "../components/StudyNoteForm";
 import DocumentChangesPanel from "../components/DocumentChangesPanel";
 import { documentApi } from "../api/documentApi";
@@ -337,11 +338,11 @@ const handleClassify = async () => {
   const canShare = canManage && !isPending;
 
   return (
-    <div>
+    <div className="document-detail-page">
      <div className="doc-detail-header">
   <div className="doc-detail-heading">
     <Link to="/documents" className="doc-back-link">
-      ← Tài liệu
+      <ArrowLeft size={16} aria-hidden="true" /> Tài liệu
     </Link>
 
     <h1>{document.title}</h1>
@@ -656,7 +657,7 @@ const handleClassify = async () => {
                 )
               }
             >
-              ↓ Tải xuống
+              <Download size={16} aria-hidden="true" /> Tải xuống
             </Button>
 
             {canEdit && (
@@ -668,9 +669,8 @@ const handleClassify = async () => {
                     fileInputRef.current?.click()
                   }
                 >
-                  {uploading
-                    ? "Đang tải..."
-                    : "↑ Tải phiên bản mới"}
+                  <Upload size={16} aria-hidden="true" />
+                  {uploading ? "Đang tải..." : "Tải phiên bản mới"}
                 </Button>
 
                 <input
@@ -687,7 +687,7 @@ const handleClassify = async () => {
                 variant="danger"
                 onClick={handleDelete}
               >
-                Xóa tài liệu
+                <Trash2 size={16} aria-hidden="true" /> Xóa tài liệu
               </Button>
             )}
           </div>
@@ -697,6 +697,11 @@ const handleClassify = async () => {
 
     
 
+
+  </div>
+</div>
+
+<div className="doc-history-grid">
     <section className="panel doc-version-panel">
       <h2 className="panel-title">
         Phiên bản tài liệu
@@ -765,9 +770,6 @@ const handleClassify = async () => {
         </table>
       )}
     </section>
-  </div>
-</div>
-
 {/* Hoạt động giữ lại nhưng làm thành một khối phụ */}
 <section className="panel doc-activity-panel">
   <h2 className="panel-title">
@@ -805,6 +807,7 @@ const handleClassify = async () => {
     </div>
   )}
 </section>
+</div>
         <div className="doc-management-grid">
           {canShare && (
             <section className="panel doc-access-panel">
@@ -884,12 +887,12 @@ const handleClassify = async () => {
               <h2 className="panel-title">Phê duyệt tài liệu</h2>
               {document.status === "approved" ? (
                 <div className="empty-state">
-                  <span className="empty-icon">✅</span>
+                  <CircleCheck size={24} aria-hidden="true" />
                   Tài liệu đã được duyệt và chính thức sử dụng.
                 </div>
               ) : document.status === "rejected" ? (
                 <div className="empty-state">
-                  <span className="empty-icon">⛔</span>
+                  <CircleX size={24} aria-hidden="true" />
                   Tài liệu đã bị từ chối duyệt. Nhân viên có thể tải bản mới để
                   gửi lại duyệt.
                 </div>

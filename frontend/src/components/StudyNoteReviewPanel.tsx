@@ -5,6 +5,8 @@ import type {
   StudyNoteComparison,
 } from "../api/studyNoteApi";
 import Button from "./ui/Button";
+import { Check, X, GitCompareArrows } from "lucide-react";
+import "../review-panel.css";
 
 interface Props {
   noteId: number;
@@ -174,7 +176,7 @@ export default function StudyNoteReviewPanel({
   }
 
   return (
-    <section
+    <section className="document-review"
       aria-label="Đối chiếu tài liệu nguồn"
       style={{
         marginTop: 20,
@@ -182,7 +184,7 @@ export default function StudyNoteReviewPanel({
         borderTop: "1px solid #e5e7eb",
       }}
     >
-      <h3>Đối chiếu tài liệu nguồn</h3>
+      <h3 className="review-heading"><GitCompareArrows size={20} aria-hidden="true" /> Đối chiếu tài liệu nguồn</h3>
 
       {loading && <p role="status">Đang tải nội dung...</p>}
 
@@ -200,7 +202,7 @@ export default function StudyNoteReviewPanel({
             thêm ở bên phải.
           </p>
 
-          <div
+          <div className="review-legend"
             style={{
               display: "flex",
               flexWrap: "wrap",
@@ -238,7 +240,7 @@ export default function StudyNoteReviewPanel({
             </p>
           )}
 
-          <div
+          <div className="review-columns"
             style={{
               display: "grid",
               gridTemplateColumns:
@@ -253,6 +255,7 @@ export default function StudyNoteReviewPanel({
               </h4>
 
               <div
+                className="review-text"
                 tabIndex={0}
                 aria-label="Nội dung nguồn lần kiểm tra trước"
                 style={{
@@ -307,6 +310,7 @@ export default function StudyNoteReviewPanel({
               </h4>
 
               <div
+                className="review-text"
                 tabIndex={0}
                 aria-label="Nội dung nguồn hiện tại"
                 style={{
@@ -361,7 +365,7 @@ export default function StudyNoteReviewPanel({
             nội dung trước khi mở lại để xác nhận.
           </p>
 
-          <label
+          <label className="review-confirm"
             style={{
               display: "flex",
               alignItems: "flex-start",
@@ -384,13 +388,14 @@ export default function StudyNoteReviewPanel({
         </>
       )}
 
-      <div className="row-actions" style={{ marginTop: 16 }}>
+      <div className="review-actions">
         {comparison && (
           <Button
             type="button"
             disabled={loading || saving || !checked}
             onClick={handleConfirm}
           >
+            <Check size={17} aria-hidden="true" />
             {saving ? "Đang xác nhận..." : "Xác nhận đã xem lại"}
           </Button>
         )}
@@ -401,7 +406,7 @@ export default function StudyNoteReviewPanel({
           disabled={saving}
           onClick={onClose}
         >
-          Đóng
+          <X size={17} aria-hidden="true" /> Đóng
         </Button>
       </div>
     </section>
