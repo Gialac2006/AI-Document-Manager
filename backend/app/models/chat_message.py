@@ -17,4 +17,14 @@ class ChatMessage(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    chat: Mapped["Chat"] = relationship("Chat", back_populates="messages")
+    chat: Mapped["Chat"] = relationship(
+        "Chat",
+        back_populates="messages",
+    )
+
+    attachments: Mapped[list["ChatAttachment"]] = relationship(
+        "ChatAttachment",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        order_by="ChatAttachment.id",
+    )

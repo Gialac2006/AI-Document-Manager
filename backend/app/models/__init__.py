@@ -12,3 +12,4 @@ from app.models.password_reset_token import PasswordResetToken  # noqa: F401
 from app.models.document_approval import DocumentApproval  # noqa: F401
 from app.models.study_note import StudyNote  # noqa: F401
 from app.models.document_notification import DocumentNotification  # noqa: F401
+from app.models.chat_attachment import ChatAttachment  # noqa: F401
