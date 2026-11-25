@@ -1,6 +1,6 @@
 # AI Document Manager
 
-Hệ thống quản lý tài liệu thông minh cho doanh nghiệp, trường đại học và cơ quan nhà nước — hỗ trợ lưu trữ, tìm kiếm và khai thác tài liệu bằng AI.
+Ứng dụng web quản lý tài liệu, hỏi đáp bằng AI và theo dõi thay đổi nguồn. Đề tài được thực hiện tại trường dưới sự hướng dẫn của giảng viên, được phát triển và kiểm thử trên môi trường cục bộ.
 
 ## Tổng quan
 
@@ -9,7 +9,9 @@ AI Document Manager là một ứng dụng web giúp tổ chức lưu trữ và 
 - **Trích xuất nội dung**: chuyển PDF/ảnh thành văn bản bằng OCR.
 - **Tìm kiếm ngữ nghĩa**: tìm tài liệu theo ý nghĩa câu hỏi, không chỉ theo từ khoá.
 - **Hỏi đáp theo tài liệu (RAG)**: đặt câu hỏi và nhận câu trả lời dựa trên nội dung tài liệu đã lưu.
-- **Quản lý phiên bản**: theo dõi lịch sử chỉnh sửa của từng tài liệu.
+- **Quản lý phiên bản**: lưu nội dung theo phiên bản để đối chiếu thay đổi.
+- **Chat ảnh**: dán ảnh bằng Ctrl+V hoặc chọn ảnh, hỏi AI và xem lại ảnh trong lịch sử.
+- **Ghi chú và thông báo**: theo dõi nguồn đã tham khảo, đối chiếu bản cập nhật và xác nhận đã xem lại.
 
 Sản phẩm gồm: Website, REST API, Docker và tài liệu kỹ thuật.
 
@@ -31,12 +33,26 @@ Sản phẩm gồm: Website, REST API, Docker và tài liệu kỹ thuật.
 - Tìm kiếm ngữ nghĩa
 - Hỏi đáp theo tài liệu
 - Phân loại tài liệu
-- Trích xuất thông tin (entity, ngày tháng, số liệu...)
+- Trả lời câu hỏi về thông tin trong tài liệu, kèm nguồn khi có căn cứ phù hợp
 
-### Chức năng nâng cao
-- RAG (Retrieval-Augmented Generation)
-- Vector Database
-- Chat với PDF
+### Chat văn bản và ảnh
+- Hỏi đáp dựa trên các tài liệu tài khoản có quyền xem, kết hợp truy xuất vector và từ khóa.
+- Dán ảnh bằng **Ctrl+V** hoặc bấm **Thêm ảnh**; xem trước và xóa ảnh chờ gửi.
+- Gửi ảnh kèm câu hỏi hoặc chỉ gửi ảnh để yêu cầu mô tả nội dung.
+- Hỗ trợ **PNG, JPG/JPEG, WebP tĩnh**; tối đa **3 ảnh/lượt**, **5 MB/ảnh**, **20 triệu điểm ảnh/ảnh**. Giới hạn ảnh chat độc lập với giới hạn tải tài liệu.
+- Backend giải mã ảnh để kiểm tra định dạng thực tế, xử lý hướng ảnh và mã hóa lại ảnh mà không giữ metadata gốc.
+- Câu trả lời phân biệt `[Ảnh n]` người dùng đính kèm và `[Nguồn n]` từ các đoạn tài liệu truy xuất.
+- Lưu ảnh cùng tin nhắn; khi tải lại trang và mở hội thoại, ảnh vẫn hiển thị. Có thể hỏi tiếp về lượt gửi có ảnh gần nhất trong sáu tin nhắn lịch sử được đưa vào ngữ cảnh.
+- Mỗi cuộc trò chuyện có nút **xóa** và hộp xác nhận. Hủy xác nhận giữ nguyên lịch sử; xác nhận xóa sẽ xóa hội thoại, tin nhắn và thông tin ảnh, sau đó dọn tệp ảnh.
+- Chỉ **chủ cuộc trò chuyện** được xem ảnh, xem lịch sử hoặc xóa chat, kể cả với tài khoản khác trong cùng tổ chức hay có vai trò quản trị.
+
+Ảnh được lưu trong `storage/uploads/chat_images/` theo cấu hình `STORAGE_PATH` và phục vụ qua API có xác thực. Khi người dùng bấm Gửi, ảnh được chuyển đến Gemini để phân tích; ảnh đính kèm không tự trở thành tài liệu được lập chỉ mục trong Qdrant. Nếu dọn tệp sau khi xóa chat gặp lỗi hệ thống tệp, backend ghi cảnh báo; bản ghi ảnh đã bị xóa nên API không còn phục vụ ảnh đó.
+
+### Ghi chú và đối chiếu nguồn
+- Ghi chú cá nhân gắn với tài liệu và phiên bản nguồn.
+- Lưu riêng nguồn ban đầu, mốc đã xem lại và nguồn hiện tại; cảnh báo khi nội dung cần xem lại.
+- Thông báo cập nhật cho người được chia sẻ tài liệu, xem đối chiếu giữa hai phiên bản.
+- Tách thao tác **đã đọc** và **đã đối chiếu**; backend kiểm tra lại quyền, phiên bản và nội dung tại lúc xác nhận.
 
 ## Vai trò người dùng
 
@@ -74,9 +90,10 @@ Hệ thống phân biệt **admin hệ thống** và **người dùng trong tổ
 | Frontend | React 19, React Router, Vite 8, TypeScript |
 | Backend | FastAPI (Python) |
 | Cơ sở dữ liệu | PostgreSQL |
-| Vector Database | Qdrant (hoặc Chroma) |
+| Vector Database | Qdrant |
 | OCR | Tesseract / PyMuPDF |
-| LLM | LLM API (OpenAI, Gemini...) |
+| Embedding | Sentence Transformers, mô hình đa ngôn ngữ 384 chiều |
+| LLM và hiểu ảnh | Gemini API, cấu hình qua `LLM_MODEL` và `LLM_API_KEY` |
 | Triển khai | Docker Compose, Nginx |
 
 ## Cấu trúc dự án
@@ -86,7 +103,7 @@ ai-document-manager/
 ├── frontend/                    # React + Vite + TypeScript
 │   ├── src/
 │   │   ├── api/                 # authApi, documentApi, folderApi, chatApi
-│   │   ├── components/          # DocumentCard, UploadDocument, FolderTree, SearchBar, ChatBox, DocumentPreview
+│   │   ├── components/          # Thành phần giao diện, ChatImageInput, ChatMessageImages
 │   │   │   └── ui/              # Button, PasswordInput, AuthIntro, Spinner
 │   │   ├── pages/               # Login, Register, ForgotPassword, ResetPassword, Dashboard, Documents, DocumentDetail, Profile, Search, Chat, Admin
 │   │   ├── layouts/             # MainLayout
@@ -106,6 +123,7 @@ ai-document-manager/
 │   ├── alembic/                 # migration schema (Alembic)
 │   │   └── versions/
 │   ├── alembic.ini
+│   ├── tests/                   # Kiểm thử API chat ảnh, quyền truy cập và xóa hội thoại
 │   └── app/
 │       ├── main.py              # entry point
 │       ├── api/
@@ -113,16 +131,14 @@ ai-document-manager/
 │       │   └── routes/          # auth, users, folders, documents, search, chat, admin
 │       ├── core/                # config, security, exceptions
 │       ├── database/            # connection, base
-│       ├── models/              # organization, user, folder, document, document_version, permission, audit_log, chat
+│       ├── models/              # Tài liệu, phiên bản, quyền, chat, ảnh chat, ghi chú, thông báo
 │       ├── schemas/             # Pydantic request/response
 │       ├── repositories/        # truy vấn DB
 │       ├── services/            # auth, document, storage, extraction, ocr, chunking, embedding, vector, summary, rag
 │       └── utils/               # file_utils, text_utils
 │
-├── database/
-│   └── init.sql                 # schema khởi tạo
 ├── storage/
-│   └── uploads/                 # file tài liệu lưu trữ
+│   └── uploads/                 # Tài liệu và chat_images/; không đưa tệp người dùng vào Git
 ├── scripts/                     # init_database.sql, seed_data.py
 ├── docs/                        # requirements, diagrams, api, database, test-cases
 ├── compose.yaml                 # frontend + backend + PostgreSQL + Qdrant
@@ -132,23 +148,43 @@ ai-document-manager/
 ## Cài đặt & chạy
 
 ### Yêu cầu
-- Node.js >= 20
+- Docker Desktop/Docker Engine và Docker Compose v2 cho cách chạy Docker
+- Khi chạy frontend trực tiếp: Node.js 20.19+ hoặc 22.12+ (theo yêu cầu Vite 8)
 - Python >= 3.11
-- Docker (khuyến nghị)
+- Khóa Gemini API để dùng tóm tắt, phân loại và hỏi đáp, bao gồm hỏi đáp ảnh
 
 ### Cấu hình môi trường
 ```bash
 cp .env.example .env
 ```
 
+Điền `SECRET_KEY` riêng và `LLM_API_KEY` vào `.env`; đặt `LLM_MODEL` thành mô hình Gemini tài khoản được phép sử dụng và có hỗ trợ ảnh khi dùng chat ảnh. `.env` không được đưa vào Git.
+
 ### Cách 1: Docker Compose (khuyến nghị)
+
+Sau khi tạo `.env`, chạy tại thư mục gốc:
+
 ```bash
-cp .env.example .env   # lần đầu
-docker compose up --build
+docker compose build backend frontend
+docker compose up -d db vector-db
+docker compose exec db pg_isready -U postgres -d ai_document_manager
 ```
-- Website: http://localhost
-- API + Swagger: http://localhost:8000/docs
-- pgAdmin (quản lý DB): http://localhost:5050 — đăng nhập bằng `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` (trong `.env`). Server **"AI Document Manager DB"** đã được đăng ký sẵn (host `db`, user `postgres`). Khi mở server lần đầu, nhập `POSTGRES_PASSWORD` (mặc định `postgres`) và tick **Save Password** — lần sau tự vào, không hỏi lại.
+
+Khi PostgreSQL báo `accepting connections`, áp migration rồi khởi động ứng dụng:
+
+```bash
+docker compose run --rm --no-deps backend alembic upgrade head
+docker compose up -d --no-deps backend frontend
+docker compose exec backend alembic current
+```
+
+Migration ảnh chat là `f3b5d7e9a1c2`, nối tiếp `f1a3c5e7b9d0`. Khi cập nhật mã nguồn có migration mới, build backend trước rồi chạy `alembic upgrade head`; không cần xóa dữ liệu cũ.
+
+- Website theo `compose.yaml`: http://localhost. Bản cấu hình local có `compose.override.yaml` ánh xạ frontend sang **http://localhost:8080**, PostgreSQL sang cổng host **5433**.
+- API + Swagger: http://localhost:8000/docs (Swagger chỉ bật ngoài môi trường production).
+- Kiểm tra dịch vụ: http://localhost:8000/health
+- Xem cổng thực tế: `docker compose ps`.
+- pgAdmin (tùy chọn): chạy `docker compose up -d pgadmin`, mở http://localhost:5050 và đăng nhập bằng `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` trong `.env`. Kết nối PostgreSQL từ pgAdmin bằng host `db`, cổng `5432` và tài khoản cơ sở dữ liệu đã cấu hình.
 
 ### Cách 2: Chạy thủ công
 
@@ -165,6 +201,8 @@ cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
+
+Khi chạy backend trực tiếp trên máy, cấu hình `DATABASE_URL` và `VECTOR_DB_URL` bằng địa chỉ truy cập từ máy host. Tên host `db` và `vector-db` chỉ dùng bên trong mạng Docker; với cấu hình local, cổng PostgreSQL trên host là 5433. Frontend Vite dùng địa chỉ mà `npm run dev` hiển thị.
 
 ## API endpoints
 
@@ -199,10 +237,21 @@ uvicorn app.main:app --reload
 | GET | `/api/v1/documents/{id}/approvals` | Lịch sử phê duyệt | ✅ |
 | GET | `/api/v1/documents/{id}/audit-logs` | Nhật ký hoạt động của tài liệu | ✅ |
 | GET | `/api/v1/audit-logs?user_id=...` | Nhật ký hoạt động theo người dùng | ✅ |
-| GET | `/api/v1/search?q=...` | Tìm kiếm ngữ nghĩa | ⏳ |
-| POST | `/api/v1/chat` | Hỏi đáp theo tài liệu (RAG) | ⏳ |
+| GET | `/api/v1/search?q=...` | Tìm kiếm kết hợp vector và từ khóa, giới hạn theo quyền | ✅ |
+| GET | `/api/v1/chat` | Danh sách cuộc trò chuyện của tài khoản hiện tại | ✅ |
+| GET | `/api/v1/chat/{chat_id}` | Lịch sử tin nhắn và thông tin ảnh đính kèm | ✅ |
+| POST | `/api/v1/chat` | Hỏi đáp văn bản; nhận JSON `question`, `chat_id` tùy chọn | ✅ |
+| POST | `/api/v1/chat/with-images` | Hỏi đáp ảnh; multipart gồm `images` (lặp lại cho nhiều ảnh), `question`, `chat_id` tùy chọn | ✅ |
+| GET | `/api/v1/chat/attachments/{attachment_id}` | Đọc ảnh sau khi xác thực chủ hội thoại | ✅ |
+| DELETE | `/api/v1/chat/{chat_id}` | Xóa hội thoại của chính mình, trả HTTP 204 | ✅ |
+| GET/POST | `/api/v1/study-notes` | Danh sách và tạo ghi chú cá nhân | ✅ |
+| GET/PATCH/DELETE | `/api/v1/study-notes/{note_id}` | Xem, sửa hoặc xóa ghi chú của chính mình | ✅ |
+| GET | `/api/v1/notifications` | Danh sách thông báo cập nhật tài liệu được chia sẻ | ✅ |
+| PATCH | `/api/v1/notifications/{notification_id}/read` | Đánh dấu đã đọc | ✅ |
+| GET | `/api/v1/notifications/{notification_id}/comparison` | Lấy dữ liệu đối chiếu và mã xác nhận | ✅ |
+| POST | `/api/v1/notifications/{notification_id}/review` | Xác nhận đã đối chiếu sau khi kiểm tra lại nguồn và quyền | ✅ |
 
-> ✅ = đã triển khai, ⏳ = chưa triển khai. Tài liệu API đầy đủ tại `/docs` (Swagger UI).
+> ✅ = đã có luồng triển khai trong mã nguồn, không có nghĩa mọi trường hợp đều đã kiểm thử. Các API nghiệp vụ cần Bearer token; xem tham số và schema đầy đủ tại `/docs`.
 
 ## Cơ sở dữ liệu
 
@@ -217,10 +266,9 @@ alembic upgrade head
 
 `super_admin` (chủ hệ thống) **không đăng ký qua API** — tạo bằng script seed:
 
-```bash
-cd backend
-$env:PYTHONPATH = "D:\TTTN\AI-Document-Manager\backend"   # Windows
-python ..\scripts\seed_data.py
+```powershell
+# PowerShell, tại thư mục gốc dự án; chỉ dùng khi cần dữ liệu demo
+Get-Content scripts/seed_data.py -Raw | docker compose exec -T backend python -
 ```
 
 Kết quả tạo:
@@ -250,6 +298,9 @@ Tất cả tài khoản demo dùng mật khẩu `Demo@2026!`. Mật khẩu này 
 | `audit_logs` | Nhật ký chỉnh sửa (theo tài liệu và người dùng) |
 | `chats` | Hội thoại hỏi đáp |
 | `chat_messages` | Tin nhắn trong hội thoại (role, content) |
+| `chat_attachments` | Thông tin ảnh: tin nhắn sở hữu, tên, khóa tệp, MIME, dung lượng |
+| `study_notes` | Ghi chú cá nhân, nguồn ban đầu và mốc đã xem lại |
+| `document_notifications` | Thông báo cập nhật, trạng thái đã đọc và đã đối chiếu |
 | `password_reset_tokens` | Token đặt lại mật khẩu (hạn 60 phút, dùng 1 lần) |
 
 **Trạng thái tài liệu:**
@@ -294,20 +345,48 @@ Phê duyệt (chỉ tài liệu do nhân viên upload):
   └── Sau khi duyệt → công khai toàn tổ chức + chia sẻ / quản lý phiên bản
         │
         ▼
-Xử lý tự động (Giai đoạn 3):
+Xử lý tài liệu:
   OCR / trích xuất văn bản → chunk (chia đoạn)
         → embedding (vector hoá) → lưu vào Qdrant
         │
         ▼
 Người dùng khai thác:
   ├── Tìm kiếm ngữ nghĩa → truy vấn vector → kết quả tài liệu liên quan
-  ├── Chat với tài liệu (RAG) → truy vấn vector → gửi LLM → câu trả lời kèm nguồn
-  ├── Tóm tắt / phân loại / trích xuất thông tin
+  ├── Chat với tài liệu (RAG) → truy xuất đoạn được phép xem → gửi LLM → trả lời kèm nguồn
+  ├── Dán/chọn ảnh → kiểm tra ảnh → gửi Gemini → lưu tin nhắn và ảnh riêng tư
+  ├── Tóm tắt / phân loại tài liệu
+  ├── Ghi chú cá nhân và đối chiếu khi nguồn thay đổi
   └── Quản lý phiên bản + nhật ký chỉnh sửa
         │
         ▼
 Admin hệ thống: quản lý tổ chức, người dùng, giám sát hệ thống
 ```
+
+## Kiểm thử chat ảnh
+
+Sau khi cài dependencies backend, chạy tại thư mục `backend`:
+
+```bash
+python -m unittest discover -s tests -p "test_chat_images.py" -v
+```
+
+Hoặc chạy bằng Docker tại thư mục gốc (mount riêng thư mục test):
+
+```bash
+docker compose run --rm --no-deps -e DATABASE_URL=sqlite:// -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 -v ./backend/tests:/tests:ro backend python -m unittest discover -s /tests -p test_chat_images.py -v
+```
+
+Bộ 14 ca dùng SQLite tạm, thư mục ảnh tạm và Gemini giả lập; không gọi AI thật hoặc ghi vào cơ sở dữ liệu ứng dụng. Các ca bao gồm lưu/tải ảnh và lịch sử; kiểm tra loại, số lượng và dung lượng ảnh; hỏi tiếp về ảnh; chặn tài khoản khác; rollback khi AI hoặc commit lỗi; xóa chat cùng dữ liệu và tệp; giữ dữ liệu khi xóa không thành công; tương thích chat văn bản.
+
+Kiểm tra frontend:
+
+```bash
+cd frontend
+npm run build
+npm run lint
+```
+
+Kiểm tra thủ công với Gemini đang cấu hình: gửi ảnh có chữ → đọc câu trả lời → tải lại trang và mở lại chat → thử gửi chỉ ảnh → thử hủy và xác nhận xóa một hội thoại thử. Khả năng đọc ảnh mờ, bảng biểu hoặc ảnh có bố cục phức tạp cần được đánh giá riêng.
 
 ## Làm việc nhóm
 
@@ -345,7 +424,7 @@ docker compose down -v            # dừng + XOÁ toàn bộ dữ liệu (cẩn 
 docker compose exec db psql -U postgres -d ai_document_manager   # truy vấn DB
 python scripts/seed_data.py       # seed dữ liệu demo + admin
 ```
-- Quy trình pull mới: `git pull` → `docker compose up -d --build` → `alembic upgrade head` (nếu có migration mới) → seed lại nếu cần.
+- Quy trình cập nhật: `git pull` → `docker compose build backend frontend` → `docker compose run --rm --no-deps backend alembic upgrade head` (khi DB đã chạy) → `docker compose up -d --no-deps backend frontend`. Seed dữ liệu demo là bước tùy chọn.
 - Khi cài thêm package: **backend** sửa `backend/requirements.txt` (không `pip install` rồi quên), **frontend** `npm install <pkg>` — cả hai đều cần rebuild image.
 
 ### 5. Kiểm tra trước khi push
@@ -362,15 +441,8 @@ python scripts/seed_data.py       # seed dữ liệu demo + admin
 
 ## Trạng thái phát triển
 
-> Dự án phát triển theo từng giai đoạn, mỗi giai đoạn hoàn thiện một mảng tính năng. Toàn bộ **schema DB đã dựng đủ** (11 bảng) ngay từ đầu.
+Các luồng đã triển khai gồm tài khoản và bốn vai trò; quản lý, chia sẻ, phê duyệt và phiên bản tài liệu; trích xuất/OCR, embedding và tìm kiếm; tóm tắt, phân loại, hỏi đáp tài liệu; ghi chú và thông báo đối chiếu; chat ảnh và xóa hội thoại. Schema được cập nhật qua migration Alembic.
 
-| Giai đoạn | Nội dung | Trạng thái |
-|---|---|---|
-| 0 | Hạ tầng: FastAPI + PostgreSQL + Alembic, `GET /` và `GET /health` | ✅ Hoàn thành |
-| 1 | Auth + Vai trò: đăng ký (cá nhân / tổ chức), đăng nhập, JWT, quản lý người dùng, quên mật khẩu, hồ sơ cá nhân | ✅ Hoàn thành |
-| 2 | Documents + Folders: upload, CRUD theo phạm vi vai trò | ✅ Hoàn thành |
-| 3 | Pipeline AI: PDF→text, OCR, chunk, embedding, Qdrant / Chroma | 🔄 Đang triển khai (đã có trích xuất văn bản PDF khi upload + **OCR ảnh/PDF scan bằng Tesseract**) |
-| 4 | Search + Chat (RAG) | ⏳ Chưa bắt đầu |
-| 5 | Nâng cao: permissions chi tiết, version, audit log | ✅ Hoàn thành (chia sẻ, phê duyệt, nhật ký) |
+Đã xác nhận thủ công việc gửi ảnh và nhận phản hồi AI, giữ ảnh sau khi tải lại trang, gửi chỉ ảnh, hủy xóa và xác nhận xóa hội thoại thử. Đây là kết quả trên môi trường cục bộ, không phải cam kết chất lượng cho mọi đầu vào hoặc mức tải.
 
-> ✅ = hoàn thành, 🔄 = đang triển khai, ⏳ = chưa bắt đầu.
+Các hướng cần đánh giá thêm: chất lượng truy xuất và hiểu ảnh trên tập dữ liệu đa dạng, tải đồng thời, lỗi dịch vụ AI, sao lưu/khôi phục và vận hành production. Cá nhân hóa và cảnh báo câu trả lời cũ khi nguồn thay đổi là hướng mở rộng, chưa triển khai trong phiên bản này.

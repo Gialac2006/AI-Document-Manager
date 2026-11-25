@@ -108,3 +108,7 @@ export async function requestWithHeaders<T = unknown>(
   }
   return { data: await response.json(), headers: response.headers };
 }
+export async function requestBlob(path: string): Promise<Blob> {
+  const response = await requestRaw(path);
+  return response.blob();
+}
